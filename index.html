@@ -129,7 +129,7 @@ const SCN=[
 ];
 /* ───────── 狀態與儲存 ───────── */
 const S={gkey:'',okey:'',akey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',useSchool:false};
-try{Object.assign(S,JSON.parse(localStorage.getItem('pa_set')||'{}'));}catch(e){}
+try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-2.5-flash';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 (function fixModels(){const def={gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
  for(const f in def){const v=(S[f]||'').trim();
