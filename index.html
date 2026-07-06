@@ -72,9 +72,29 @@ nav button .i{display:block;font-size:20px}
 .tc-inp button{flex:1;padding:5px;border-radius:7px;border:none;font-size:12px;cursor:pointer;font-weight:600}
 .tc-save{background:#16a34a;color:#fff}
 .tc-cancel{background:#f3f4f6;color:#374151}
+
+/* PIN LOCK */
+#pin-lock{position:fixed;inset:0;z-index:999;background:#1e1b4b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+#pin-lock.off{display:none}
+.pl-icon{font-size:3rem}
+.pl-title{font-size:1.3rem;font-weight:800;color:#e0e7ff}
+.pl-sub{font-size:.82rem;color:#818cf8}
+.pl-dots{display:flex;gap:14px}
+.pl-dot{width:14px;height:14px;border-radius:50%;border:2px solid #4f46e5;background:transparent;transition:.15s}
+.pl-dot.on{background:#818cf8;border-color:#818cf8}
+.pl-dot.err{background:#ef4444;border-color:#ef4444}
+.pl-dot.ok{background:#10b981;border-color:#10b981}
+.pl-err{font-size:.78rem;color:#f87171;min-height:18px;text-align:center}
+.pl-pad{display:grid;grid-template-columns:repeat(3,68px);gap:10px}
+.pl-key{width:68px;height:68px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#e0e7ff;font-size:1.35rem;font-weight:600;cursor:pointer;transition:.12s;user-select:none}
+.pl-key:hover{background:rgba(255,255,255,.15)}
+.pl-key:active{transform:scale(.88)}
+.pl-key.empty{background:transparent;pointer-events:none}
+.pl-hint{font-size:.72rem;color:#818cf8;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
+<div id="pin-lock"><div class="pl-icon">&#x1f393;</div><div class="pl-title">&#x6821;&#x9577;&#x52a9;&#x7406;</div><div class="pl-sub" id="pl-sub">&#x8acb;&#x8f38;&#x5165; PIN &#x78bc;</div><div class="pl-dots"><div class="pl-dot" id="pd0"></div><div class="pl-dot" id="pd1"></div><div class="pl-dot" id="pd2"></div><div class="pl-dot" id="pd3"></div></div><div class="pl-err" id="pl-err"></div><div class="pl-pad" id="pl-pad" data-step="verify"><button class="pl-key" onclick="plKey('1')">1</button><button class="pl-key" onclick="plKey('2')">2</button><button class="pl-key" onclick="plKey('3')">3</button><button class="pl-key" onclick="plKey('4')">4</button><button class="pl-key" onclick="plKey('5')">5</button><button class="pl-key" onclick="plKey('6')">6</button><button class="pl-key" onclick="plKey('7')">7</button><button class="pl-key" onclick="plKey('8')">8</button><button class="pl-key" onclick="plKey('9')">9</button><button class="pl-key empty"></button><button class="pl-key" onclick="plKey('0')">0</button><button class="pl-key" onclick="plDel()">&#x232b;</button></div><div class="pl-hint" id="pl-hint" onclick="plForgot()">&#x5fcd;&#x8a18; PIN&#xff1f;&#x91cd;&#x8a2d;</div></div>
 <header><span style="font-size:24px">🎓</span><h1>校長助理<div class="sub">你的 AI 幕僚長・疑難雜症一起想</div></h1></header>
 <main>
   <!-- 首頁 -->
@@ -100,6 +120,7 @@ nav button .i{display:block;font-size:20px}
       <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
       <div class="hint">會讀取同網域「<a href="https://cyysongyy.github.io/CK-SCHADMIN/" target="_blank">Young校務管理系統</a>」存在此瀏覽器的資料（教職員、行事曆、研習、年級班級），讓 AI 的建議貼合你學校實況。注意：開啟後，這些資料會隨你的問題送到你設定的 AI 服務；且需在同一個瀏覽器使用過校務系統才有資料。</div>
     </div>
+    <div class="set"><h3>&#x1f510; PIN &#x5bc6;&#x78bc;</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">&#x4fee;&#x6539;&#x958b;&#x555f; App &#x6240;&#x9700;&#x7684; 4 &#x4f4d; PIN</p><button class="btn btn2" onclick="changePinFlow()">&#x4fee;&#x6539; PIN</button></div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
       <button class="btn btn2" onclick="clearHist()">清除全部對話記錄</button>
@@ -301,6 +322,44 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
 function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
+
+(function(){
+var STORE='pa_pin';
+var buf='';
+var stored=localStorage.getItem(STORE);
+function dots(cls){for(var i=0;i<4;i++){var d=document.getElementById('pd'+i);d.className='pl-dot'+(i<buf.length?' on':'')+(cls?' '+cls:'');}}
+function unlock(){document.getElementById('pin-lock').classList.add('off');}
+function setupFlow(){document.getElementById('pl-sub').textContent='首次使用，請設定 4 位 PIN';document.getElementById('pl-pad').setAttribute('data-step','set1');document.getElementById('pl-err').textContent='';window._plSet1='';document.getElementById('pl-hint').style.display='none';}
+if(!stored){setupFlow();}else{document.getElementById('pl-hint').style.display='block';}
+window.plKey=function(n){
+  if(buf.length>=4)return;
+  buf+=n;dots();
+  if(buf.length===4){
+    var step=document.getElementById('pl-pad').getAttribute('data-step');
+    setTimeout(function(){
+      if(step==='set1'){
+        window._plSet1=buf;buf='';dots();
+        document.getElementById('pl-sub').textContent='再輸入一次確認';
+        document.getElementById('pl-pad').setAttribute('data-step','set2');
+      }else if(step==='set2'){
+        if(buf===window._plSet1){
+          localStorage.setItem(STORE,buf);dots('ok');setTimeout(unlock,400);
+        }else{
+          dots('err');document.getElementById('pl-err').textContent='兩次不一致，重新設定';buf='';
+          setTimeout(function(){dots();document.getElementById('pl-err').textContent='';setupFlow();},800);
+        }
+      }else{
+        if(buf===stored){dots('ok');setTimeout(unlock,300);}
+        else{dots('err');document.getElementById('pl-err').textContent='PIN 錯誤';buf='';setTimeout(function(){dots();document.getElementById('pl-err').textContent='';},600);}
+      }
+    },100);
+  }
+};
+window.plDel=function(){if(buf.length>0){buf=buf.slice(0,-1);dots();}};
+window.plForgot=function(){if(confirm('確定重設 PIN？')){localStorage.removeItem(STORE);buf='';setupFlow();dots();}};
+})();
+window.changePinFlow=function(){if(confirm('確定修改 PIN？頁面將重新載入。')){localStorage.removeItem('pa_pin');location.reload();}};
+
 renderCards();renderMsgs();
 $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();sendFree();}});
 </script>
