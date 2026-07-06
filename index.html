@@ -131,6 +131,10 @@ const SCN=[
 const S={gkey:'',okey:'',akey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',useSchool:false};
 try{Object.assign(S,JSON.parse(localStorage.getItem('pa_set')||'{}'));}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
+(function fixModels(){const def={gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
+ for(const f in def){const v=(S[f]||'').trim();
+  if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)){S[f]=def[f];fixed=true;}}
+ if(fixed)localStorage.setItem('pa_set',JSON.stringify(S));})();
 function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60)));}
 const SYS=`你是台灣中小學校長的資深幕僚長（主任祕書等級），熟悉台灣教育現場、教育部與縣市教育局處行政慣例、公文程式與校園法規框架。一律使用繁體中文（台灣用語）回覆。原則：1) 給可直接使用的成品，不要只給建議清單，除非使用者只要建議。2) 涉及法規、通報、人事、採購等有法律效果的內容，結尾標註「⚠️ 請以現行法規與主管機關函釋為準」並點名該查什麼。3) 不編造數據、名字與法條號；不確定就寫【待查證】。4) 語氣專業溫暖，符合教育工作者身分。`;
 /* ───────── 畫面 ───────── */
@@ -212,7 +216,7 @@ async function aiCall(){
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
 const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI']];
-function detectKey(k){if(/^AIza/.test(k)||/^AQ\./.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
+function detectKey(k){if(/^AIza/.test(k)||/^AQ/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
 function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));}
 function addKey(){const k=$('newkey').value.trim();if(!k)return;
  const M={g:['gkey','gmodel','Gemini'],a:['akey','amodel','Claude'],o:['okey','omodel','OpenAI']};
@@ -220,12 +224,14 @@ function addKey(){const k=$('newkey').value.trim();if(!k)return;
  if(!d){alert('自動識別不出這把金鑰（Gemini=AIza/AQ. 開頭、Claude=sk-ant-、OpenAI=sk-）。\n請用左邊選單手動指定廠牌後再按一次加入。');return;}
  S[d[0]]=k;saveS();$('newkey').value='';renderKeys();alert('已加入 '+d[2]+' 金鑰 ✓');}
 function delKey(f){if(confirm('移除這把金鑰？')){S[f]='';saveS();renderKeys();}}
-function setModel(mf,el){const v=el.value.trim();if(v)S[mf]=v;saveS();}
+function setModel(mf,el){const v=el.value.trim();
+ if(/^(AIza|AQ|sk-)/i.test(v)){alert('這欄是「模型名」不是金鑰喔！金鑰請貼到上面的加入欄位。');el.value=S[mf];return;}
+ if(v)S[mf]=v;saveS();}
 function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],mf=r[1],nm=r[2];
  if(!S[kf])return '<label>'+nm+' <span class="pill">未設定</span></label>';
  var mask=S[kf].slice(0,7)+'…'+S[kf].slice(-4);
  return '<label>'+nm+' <span class="pill ok">已設定</span> <span style="font-weight:400;color:var(--g400)">'+mask+'</span></label>'
- +'<div style="display:flex;gap:8px"><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名，可改">'
+ +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');}
 function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;}
