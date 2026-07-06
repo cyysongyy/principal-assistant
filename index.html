@@ -223,15 +223,16 @@ function renderDaySection(label,ymd){
   const ckLen=ev.filter(e=>e.src==='ck').length;
   const items=ev.length?ev.map((e,i)=>{
     const isManual=i>=ckLen;
-    const del=isManual?'<button class="tc-del" onclick="delTodayItem(''+ymd+'','+(i-ckLen)+')">&#x2715;</button>':'';
-    return '<div class="tc-item"><span class="tc-time">'+(e.time||'全天')+'</span><span class="tc-name">'+e.name+'</span>'+del+'</div>';
-  }).join(''):'<div class="tc-empty">點 ＋ 新增</div>';
-  return '<div class="tc-section"><div class="tc-sec-head"><span class="tc-sec-label">'+label+'</span><button class="tc-add" onclick="toggleTcInp(''+ymd+'')">＋</button></div><div class="tc-list">'+items+'</div><div class="tc-inp" id="tc-inp-'+ymd+'"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn-'+ymd+'" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem(''+ymd+'')">新增</button><button class="tc-cancel" onclick="toggleTcInp(''+ymd+'',false)">取消</button></div></div></div>';
+    const del=isManual?`<button class="tc-del" onclick="delTodayItem('${ymd}',${i-ckLen})">&#x2715;</button>`:'';
+    return `<div class="tc-item"><span class="tc-time">${e.time||'全天'}</span><span class="tc-name">${e.name}</span>${del}</div>`;
+  }).join(''):`<div class="tc-empty">點 ＋ 新增</div>`;
+  return `<div class="tc-section"><div class="tc-sec-head"><span class="tc-sec-label">${label}</span><button class="tc-add" onclick="toggleTcInp('${ymd}')">＋</button></div><div class="tc-list">${items}</div><div class="tc-inp" id="tc-inp-${ymd}"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn-${ymd}" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem('${ymd}')">新增</button><button class="tc-cancel" onclick="toggleTcInp('${ymd}',false)">取消</button></div></div></div>`;
 }
 function renderTodayCard(){
   const todayYmd=getTodayYmd(),tomYmd=getTomYmd();
-  return '<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div>'+renderDaySection('今日',todayYmd)+renderDaySection('明日',tomYmd)+'</div>';
+  return `<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div>${renderDaySection('今日',todayYmd)}${renderDaySection('明日',tomYmd)}</div>`;
 }
+
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
