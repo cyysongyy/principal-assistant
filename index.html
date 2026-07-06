@@ -55,7 +55,11 @@ nav button .i{display:block;font-size:20px}
 .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--g100);color:var(--g600);margin-left:6px}
 .pill.ok{background:#d1fae5;color:#065f46}
 .today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:12px}
-.today-card .tc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.today-card .tc-section{margin-bottom:8px}
+.today-card .tc-section:last-child{margin-bottom:0}
+.today-card .tc-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.today-card .tc-sec-label{font-size:.72rem;font-weight:700;color:#166534;letter-spacing:.5px;text-transform:uppercase}
+.today-card .tc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .today-card .tc-title{display:flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:#166534}
 .today-card .tc-add{background:#16a34a;color:#fff;border:none;border-radius:99px;width:22px;height:22px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
 .today-card .tc-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
@@ -182,8 +186,8 @@ function go(v){['home','form','chat','set'].forEach(x=>{const el=$('v-'+x);if(el
  ['home','chat','set'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
  $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();}
 function getTodayYmd(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
-function getTodayEvents(){
-  const ymd=getTodayYmd();
+function getTomYmd(){const t=new Date();t.setDate(t.getDate()+1);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
+function getEventsForDay(ymd){
   const manual=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
   let ck=[];
   try{
@@ -193,39 +197,40 @@ function getTodayEvents(){
   }catch(e){}
   return [...ck,...manual];
 }
-function addTodayItem(){
-  const ti=document.getElementById('tc-ti'),tn=document.getElementById('tc-tn');
+function addTodayItem(ymd){
+  const ti=document.getElementById('tc-ti'),tn=document.getElementById('tc-tn-'+ymd);
   const n=(tn.value||'').trim();if(!n)return;
-  const ymd=getTodayYmd();
   const arr=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
-  arr.push({time:ti.value.trim(),name:n});
+  arr.push({time:ti?ti.value.trim():'',name:n});
   localStorage.setItem('pa_today_'+ymd,JSON.stringify(arr));
-  ti.value='';tn.value='';
-  toggleTcInp(false);renderCards();
+  if(ti)ti.value='';tn.value='';
+  toggleTcInp(ymd,false);renderCards();
 }
-function delTodayItem(i){
-  const ymd=getTodayYmd();
+function delTodayItem(ymd,i){
   const arr=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
   arr.splice(i,1);
   localStorage.setItem('pa_today_'+ymd,JSON.stringify(arr));
   renderCards();
 }
-function toggleTcInp(show){
-  const el=document.getElementById('tc-inp');
+function toggleTcInp(ymd,show){
+  const el=document.getElementById('tc-inp-'+ymd);
   if(show===undefined)show=!el.classList.contains('open');
   el.classList.toggle('open',show);
-  if(show)document.getElementById('tc-tn').focus();
+  if(show)document.getElementById('tc-tn-'+ymd).focus();
+}
+function renderDaySection(label,ymd){
+  const ev=getEventsForDay(ymd);
+  const ckLen=ev.filter(e=>e.src==='ck').length;
+  const items=ev.length?ev.map((e,i)=>{
+    const isManual=i>=ckLen;
+    const del=isManual?'<button class="tc-del" onclick="delTodayItem(''+ymd+'','+(i-ckLen)+')">&#x2715;</button>':'';
+    return '<div class="tc-item"><span class="tc-time">'+(e.time||'全天')+'</span><span class="tc-name">'+e.name+'</span>'+del+'</div>';
+  }).join(''):'<div class="tc-empty">點 ＋ 新增</div>';
+  return '<div class="tc-section"><div class="tc-sec-head"><span class="tc-sec-label">'+label+'</span><button class="tc-add" onclick="toggleTcInp(''+ymd+'')">＋</button></div><div class="tc-list">'+items+'</div><div class="tc-inp" id="tc-inp-'+ymd+'"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn-'+ymd+'" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem(''+ymd+'')">新增</button><button class="tc-cancel" onclick="toggleTcInp(''+ymd+'',false)">取消</button></div></div></div>';
 }
 function renderTodayCard(){
-  const ev=getTodayEvents();
-  const ckLen=ev.filter(e=>e.src==='ck').length;
-  const manualStartIdx=ckLen;
-  const items=ev.length?ev.map((e,i)=>{
-    const isManual=i>=manualStartIdx;
-    const del=isManual?'<button class="tc-del" onclick="delTodayItem('+(i-manualStartIdx)+')">&#x2715;</button>':'';
-    return '<div class="tc-item"><span class="tc-time">'+(e.time||'全天')+'</span><span class="tc-name">'+e.name+'</span>'+del+'</div>';
-  }).join(''):'<div class="tc-empty">點 ＋ 新增今日行程</div>';
-  return '<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 今日行程</span><button class="tc-add" onclick="toggleTcInp()">＋</button></div><div class="tc-list">'+items+'</div><div class="tc-inp" id="tc-inp"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem()">新增</button><button class="tc-cancel" onclick="toggleTcInp(false)">取消</button></div></div></div>';
+  const todayYmd=getTodayYmd(),tomYmd=getTomYmd();
+  return '<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div>'+renderDaySection('今日',todayYmd)+renderDaySection('明日',tomYmd)+'</div>';
 }
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
