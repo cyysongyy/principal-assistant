@@ -54,6 +54,13 @@ nav button .i{display:block;font-size:20px}
 .hint a{color:var(--pri)}
 .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--g100);color:var(--g600);margin-left:6px}
 .pill.ok{background:#d1fae5;color:#065f46}
+.today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:14px 12px}
+.today-card .tc-head{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin-bottom:8px;color:#166534}
+.today-card .tc-list{display:flex;flex-direction:column;gap:5px}
+.today-card .tc-item{display:flex;gap:6px;font-size:12px;line-height:1.4}
+.today-card .tc-time{color:#16a34a;font-weight:600;white-space:nowrap;min-width:44px}
+.today-card .tc-name{color:#374151}
+.today-card .tc-empty{font-size:12px;color:#6b7280;font-style:italic}
 </style>
 </head>
 <body>
@@ -142,7 +149,9 @@ const $=id=>document.getElementById(id);
 function go(v){['home','form','chat','set'].forEach(x=>{const el=$('v-'+x);if(el)el.classList.toggle('active',x===v);});
  ['home','chat','set'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
  $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();}
-function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('');}
+function getTodayEvents(){try{const ev=JSON.parse(localStorage.getItem('ck_events')||'[]');if(!Array.isArray(ev))return[];const today=new Date();const ymd=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');return ev.filter(e=>{const d=(e.date||e.start||e.startDate||e['日期']||'').slice(0,10);return d===ymd;}).slice(0,6);}catch(e){return[];}}
+function renderTodayCard(){const ev=getTodayEvents();const items=ev.length?ev.map(e=>{const t=e.time||e.startTime||e['開始']||'';const n=e.title||e.name||e.subject||e['事由']||e['活動']||'（無標題）';return '<div class="tc-item"><span class="tc-time">'+(t||'全天')+'</span><span class="tc-name">'+n+'</span></div>';}).join(''):'<div class="tc-empty">今日無行程<br>（需在設定開啟校務系統連接）</div>';return '<div class="today-card"><div class="tc-head">📅 今日行程</div><div class="tc-list">'+items+'</div></div>';}
+function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='free'){go('chat');$('inp').focus();return;}
