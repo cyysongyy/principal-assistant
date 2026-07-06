@@ -124,6 +124,18 @@ nav button .i{display:block;font-size:20px}
       <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
       <div class="hint">會讀取同網域「<a href="https://cyysongyy.github.io/CK-SCHADMIN/" target="_blank">Young校務管理系統</a>」存在此瀏覽器的資料（教職員、行事曆、研習、年級班級），讓 AI 的建議貼合你學校實況。注意：開啟後，這些資料會隨你的問題送到你設定的 AI 服務；且需在同一個瀏覽器使用過校務系統才有資料。</div>
     </div>
+    <div class="set"><h3>&#x1f4c5; Google &#x884c;&#x4e8b;&#x66c6;</h3>
+      <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">貼上 Google 日曆的 ICS 私人網址，自動顯示今明行程。<br>取得方式：Google 日曆 → 設定 → 你的日曆 → 整合日曆 → <b>私人網址（iCal）</b></p>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="gcal-url" placeholder="https://calendar.google.com/calendar/ical/…/basic.ics" style="flex:1;font-size:12px">
+        <button class="btn" onclick="saveGcalUrl()" style="white-space:nowrap">儲存</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn btn2" onclick="fetchGcal(true)" style="flex:1">&#x1f504; 立即同步</button>
+        <button class="btn btn2" onclick="clearGcal()" style="flex:1">&#x274c; 清除</button>
+      </div>
+      <div id="gcal-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
+    </div>
     <div class="set"><h3>&#x1f510; PIN &#x5bc6;&#x78bc;</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">&#x4fee;&#x6539;&#x958b;&#x555f; App &#x6240;&#x9700;&#x7684; 4 &#x4f4d; PIN</p><button class="btn btn2" onclick="changePinFlow()">&#x4fee;&#x6539; PIN</button></div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
@@ -195,7 +207,10 @@ function getEventsForDay(ymd){
     if(Array.isArray(ev))ck=ev.filter(e=>(e.date||e.start||e.startDate||e['日期']||'').slice(0,10)===ymd)
       .map(e=>({time:e.time||e.startTime||e['開始']||'',name:e.title||e.name||e.subject||e['事由']||e['活動']||'(無標題)',src:'ck'}));
   }catch(e){}
-  return [...ck,...manual];
+  const gcal=getGcalEvents(ymd);
+  const all=[...gcal,...ck,...manual];
+  all.sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99'));
+  return all;
 }
 function addTodayItem(ymd){
   const ti=document.getElementById('tc-ti'),tn=document.getElementById('tc-tn-'+ymd);
@@ -220,7 +235,7 @@ function toggleTcInp(ymd,show){
 }
 function renderDaySection(label,ymd){
   const ev=getEventsForDay(ymd);
-  const ckLen=ev.filter(e=>e.src==='ck').length;
+  const ckLen=ev.filter(e=>e.src==='ck'||e.src==='gcal').length;
   const items=ev.length?ev.map((e,i)=>{
     const isManual=i>=ckLen;
     const del=isManual?`<button class="tc-del" onclick="delTodayItem('${ymd}',${i-ckLen})">&#x2715;</button>`:'';
@@ -232,6 +247,71 @@ function renderTodayCard(){
   const todayYmd=getTodayYmd(),tomYmd=getTomYmd();
   return `<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div>${renderDaySection('今日',todayYmd)}${renderDaySection('明日',tomYmd)}</div>`;
 }
+
+
+/* ── Google Calendar ICS ── */
+const GCAL_KEY='pa_gcal_url';
+const GCAL_CACHE='pa_gcal_cache';
+function saveGcalUrl(){
+  const u=$('gcal-url').value.trim();
+  if(u&&!u.includes('calendar.google.com')){$('gcal-st').textContent='⚠️ 請貼入 Google 日曆 ICS 網址';return;}
+  localStorage.setItem(GCAL_KEY,u);
+  $('gcal-st').textContent=u?'✓ 已儲存，正在同步…':'已清除';
+  if(u)fetchGcal(true);
+}
+function clearGcal(){localStorage.removeItem(GCAL_KEY);localStorage.removeItem(GCAL_CACHE);$('gcal-st').textContent='已清除';renderCards();}
+function parseICS(text){
+  const events=[];
+  const blocks=text.split('BEGIN:VEVENT');
+  blocks.shift();
+  for(const b of blocks){
+    const get=(k)=>{const m=b.match(new RegExp(k+'[^:]*:([^\r\n]+)'));return m?m[1].trim():'';}
+    const dtstr=get('DTSTART')||get('DTSTART;VALUE=DATE')||get('DTSTART;TZID=[^:]+');
+    const title=get('SUMMARY').replace(/\n/g,' ');
+    if(!dtstr||!title)continue;
+    // parse date: 20260706T090000Z or 20260706
+    const clean=dtstr.replace(/Z$/,'');
+    const y=clean.slice(0,4),mo=clean.slice(4,6),d=clean.slice(6,8);
+    const hasTime=clean.length>8;
+    const h=hasTime?clean.slice(9,11):'',mi=hasTime?clean.slice(11,13):'';
+    const ymd=`${y}-${mo}-${d}`;
+    const time=hasTime?`${h}:${mi}`:'';
+    events.push({ymd,time,name:title});
+  }
+  return events;
+}
+async function fetchGcal(manual=false){
+  const url=localStorage.getItem(GCAL_KEY);
+  if(!url)return;
+  const st=$('gcal-st');
+  if(st)st.textContent='同步中…';
+  try{
+    const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent(url);
+    const r=await fetch(proxy);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    const events=parseICS(text);
+    localStorage.setItem(GCAL_CACHE,JSON.stringify({ts:Date.now(),events}));
+    if(st)st.textContent=`✓ 已同步 ${events.length} 筆，${new Date().toLocaleTimeString()}`;
+    renderCards();
+  }catch(e){
+    if(st)st.textContent='⚠️ 同步失敗：'+e.message;
+  }
+}
+function getGcalEvents(ymd){
+  try{
+    const c=JSON.parse(localStorage.getItem(GCAL_CACHE)||'{}');
+    if(!c.events)return[];
+    return c.events.filter(e=>e.ymd===ymd).map(e=>({...e,src:'gcal'}));
+  }catch(e){return[];}
+}
+// Auto-fetch on load if URL saved and cache is older than 30min
+(function(){
+  const url=localStorage.getItem(GCAL_KEY);
+  if(!url)return;
+  const c=JSON.parse(localStorage.getItem(GCAL_CACHE)||'{}');
+  if(!c.ts||Date.now()-c.ts>30*60*1000)fetchGcal(false);
+})();
 
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
@@ -325,7 +405,7 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');}
-function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;}
+function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
 
