@@ -54,13 +54,24 @@ nav button .i{display:block;font-size:20px}
 .hint a{color:var(--pri)}
 .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--g100);color:var(--g600);margin-left:6px}
 .pill.ok{background:#d1fae5;color:#065f46}
-.today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:14px 12px}
-.today-card .tc-head{display:flex;align-items:center;gap:6px;font-weight:700;font-size:15px;margin-bottom:8px;color:#166534}
-.today-card .tc-list{display:flex;flex-direction:column;gap:5px}
-.today-card .tc-item{display:flex;gap:6px;font-size:12px;line-height:1.4}
-.today-card .tc-time{color:#16a34a;font-weight:600;white-space:nowrap;min-width:44px}
-.today-card .tc-name{color:#374151}
-.today-card .tc-empty{font-size:12px;color:#6b7280;font-style:italic}
+.today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:12px}
+.today-card .tc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.today-card .tc-title{display:flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:#166534}
+.today-card .tc-add{background:#16a34a;color:#fff;border:none;border-radius:99px;width:22px;height:22px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+.today-card .tc-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
+.today-card .tc-item{display:flex;align-items:flex-start;gap:5px;font-size:12px;line-height:1.4}
+.today-card .tc-time{color:#16a34a;font-weight:600;white-space:nowrap;min-width:38px;font-size:11px}
+.today-card .tc-name{color:#374151;flex:1}
+.today-card .tc-del{background:none;border:none;color:#d1d5db;cursor:pointer;font-size:11px;padding:0;flex-shrink:0}
+.today-card .tc-del:hover{color:#ef4444}
+.today-card .tc-empty{font-size:12px;color:#9ca3af;padding:4px 0}
+.tc-inp{display:none;flex-direction:column;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0}
+.tc-inp.open{display:flex}
+.tc-inp input{border:1px solid #bbf7d0;border-radius:7px;padding:5px 8px;font-size:12px;outline:none;background:#fff}
+.tc-inp .tc-btns{display:flex;gap:5px}
+.tc-inp button{flex:1;padding:5px;border-radius:7px;border:none;font-size:12px;cursor:pointer;font-weight:600}
+.tc-save{background:#16a34a;color:#fff}
+.tc-cancel{background:#f3f4f6;color:#374151}
 </style>
 </head>
 <body>
@@ -149,8 +160,52 @@ const $=id=>document.getElementById(id);
 function go(v){['home','form','chat','set'].forEach(x=>{const el=$('v-'+x);if(el)el.classList.toggle('active',x===v);});
  ['home','chat','set'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
  $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();}
-function getTodayEvents(){try{const ev=JSON.parse(localStorage.getItem('ck_events')||'[]');if(!Array.isArray(ev))return[];const today=new Date();const ymd=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');return ev.filter(e=>{const d=(e.date||e.start||e.startDate||e['日期']||'').slice(0,10);return d===ymd;}).slice(0,6);}catch(e){return[];}}
-function renderTodayCard(){const ev=getTodayEvents();const items=ev.length?ev.map(e=>{const t=e.time||e.startTime||e['開始']||'';const n=e.title||e.name||e.subject||e['事由']||e['活動']||'（無標題）';return '<div class="tc-item"><span class="tc-time">'+(t||'全天')+'</span><span class="tc-name">'+n+'</span></div>';}).join(''):'<div class="tc-empty">今日無行程<br>（需在設定開啟校務系統連接）</div>';return '<div class="today-card"><div class="tc-head">📅 今日行程</div><div class="tc-list">'+items+'</div></div>';}
+function getTodayYmd(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
+function getTodayEvents(){
+  const ymd=getTodayYmd();
+  const manual=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
+  let ck=[];
+  try{
+    const ev=JSON.parse(localStorage.getItem('ck_events')||'[]');
+    if(Array.isArray(ev))ck=ev.filter(e=>(e.date||e.start||e.startDate||e['日期']||'').slice(0,10)===ymd)
+      .map(e=>({time:e.time||e.startTime||e['開始']||'',name:e.title||e.name||e.subject||e['事由']||e['活動']||'(無標題)',src:'ck'}));
+  }catch(e){}
+  return [...ck,...manual];
+}
+function addTodayItem(){
+  const ti=document.getElementById('tc-ti'),tn=document.getElementById('tc-tn');
+  const n=(tn.value||'').trim();if(!n)return;
+  const ymd=getTodayYmd();
+  const arr=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
+  arr.push({time:ti.value.trim(),name:n});
+  localStorage.setItem('pa_today_'+ymd,JSON.stringify(arr));
+  ti.value='';tn.value='';
+  toggleTcInp(false);renderCards();
+}
+function delTodayItem(i){
+  const ymd=getTodayYmd();
+  const arr=JSON.parse(localStorage.getItem('pa_today_'+ymd)||'[]');
+  arr.splice(i,1);
+  localStorage.setItem('pa_today_'+ymd,JSON.stringify(arr));
+  renderCards();
+}
+function toggleTcInp(show){
+  const el=document.getElementById('tc-inp');
+  if(show===undefined)show=!el.classList.contains('open');
+  el.classList.toggle('open',show);
+  if(show)document.getElementById('tc-tn').focus();
+}
+function renderTodayCard(){
+  const ev=getTodayEvents();
+  const ckLen=ev.filter(e=>e.src==='ck').length;
+  const manualStartIdx=ckLen;
+  const items=ev.length?ev.map((e,i)=>{
+    const isManual=i>=manualStartIdx;
+    const del=isManual?'<button class="tc-del" onclick="delTodayItem('+(i-manualStartIdx)+')">&#x2715;</button>':'';
+    return '<div class="tc-item"><span class="tc-time">'+(e.time||'全天')+'</span><span class="tc-name">'+e.name+'</span>'+del+'</div>';
+  }).join(''):'<div class="tc-empty">點 ＋ 新增今日行程</div>';
+  return '<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 今日行程</span><button class="tc-add" onclick="toggleTcInp()">＋</button></div><div class="tc-list">'+items+'</div><div class="tc-inp" id="tc-inp"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem()">新增</button><button class="tc-cancel" onclick="toggleTcInp(false)">取消</button></div></div></div>';
+}
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
