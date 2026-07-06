@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
@@ -133,7 +133,7 @@ try{Object.assign(S,JSON.parse(localStorage.getItem('pa_set')||'{}'));}catch(e){
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 (function fixModels(){const def={gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
  for(const f in def){const v=(S[f]||'').trim();
-  if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)){S[f]=def[f];fixed=true;}}
+   if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)||(f==='gmodel'&&!v.startsWith('gemini-'))||(f==='omodel'&&!v.startsWith('gpt-'))||(f==='amodel'&&!v.startsWith('claude-'))){S[f]=def[f];fixed=true;}}
  if(fixed)localStorage.setItem('pa_set',JSON.stringify(S));})();
 function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60)));}
 const SYS=`你是台灣中小學校長的資深幕僚長（主任祕書等級），熟悉台灣教育現場、教育部與縣市教育局處行政慣例、公文程式與校園法規框架。一律使用繁體中文（台灣用語）回覆。原則：1) 給可直接使用的成品，不要只給建議清單，除非使用者只要建議。2) 涉及法規、通報、人事、採購等有法律效果的內容，結尾標註「⚠️ 請以現行法規與主管機關函釋為準」並點名該查什麼。3) 不編造數據、名字與法條號；不確定就寫【待查證】。4) 語氣專業溫暖，符合教育工作者身分。`;
