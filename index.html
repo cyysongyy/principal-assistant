@@ -71,15 +71,15 @@ nav button .i{display:block;font-size:20px}
   <!-- 設定 -->
   <div id="v-set" class="view">
     <div class="set"><h3>🤖 AI 金鑰（存在本機瀏覽器，不會上傳）</h3>
-      <label>Google Gemini API Key <span id="gs" class="pill">未設定</span></label>
-      <input type="text" id="gkey" placeholder="AIza..." autocomplete="off">
-      <div class="hint">到 <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a> 免費取得。建議優先設定這個。</div>
-      <label>OpenAI API Key（備援，可不填）<span id="os" class="pill">未設定</span></label>
-      <input type="text" id="okey" placeholder="sk-..." autocomplete="off">
-      <label>Gemini 模型名</label><input type="text" id="gmodel">
-      <label>OpenAI 模型名</label><input type="text" id="omodel">
-      <div class="hint">預設值寫入時間 2026-07；若呼叫失敗顯示模型不存在，請改成你帳號當前可用的模型名。</div>
-      <button class="btn" onclick="saveSet()">儲存設定</button>
+      <label>貼上 API Key，自動識別廠牌（Gemini／Claude／OpenAI）</label>
+      <input type="text" id="newkey" placeholder="AIza…／sk-ant-…／sk-…" autocomplete="off">
+      <button class="btn" onclick="addKey()">＋ 加入金鑰（自動識別）</button>
+      <div id="klist" style="margin-top:6px"></div>
+      <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。呼叫順序 Gemini → Claude → OpenAI，失敗自動換下一家。模型名（2026-07 預設）可在各列直接修改。</div>
+    </div>
+    <div class="set"><h3>🏫 校務系統連接</h3>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
+      <div class="hint">會讀取同網域「<a href="https://cyysongyy.github.io/CK-SCHADMIN/" target="_blank">Young校務管理系統</a>」存在此瀏覽器的資料（教職員、行事曆、研習、年級班級），讓 AI 的建議貼合你學校實況。注意：開啟後，這些資料會隨你的問題送到你設定的 AI 服務；且需在同一個瀏覽器使用過校務系統才有資料。</div>
     </div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
@@ -123,10 +123,11 @@ const SCN=[
  {id:'plan',emo:'🏫',t:'計畫與文案',d:'計畫書、新聞稿、活動文案',f:[
    ['sub','text','主題（例：雙語計畫申請、校慶新聞稿）'],['aud','text','給誰看（教育局/家長/媒體/全校）'],['pts','ta','素材與重點']],
    p:(v)=>`請幫我產出「${v.sub}」，讀者是：${v.aud}。素材：${v.pts}。要求：先給架構、再給全文；量化成效處留【待填數字】，不要編造數據。`},
+ {id:'sch',emo:'🏫',t:'校務系統',d:'開啟 Young 校務管理系統',f:[],p:null},
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
 /* ───────── 狀態與儲存 ───────── */
-const S={gkey:'',okey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini'};
+const S={gkey:'',okey:'',akey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',useSchool:false};
 try{Object.assign(S,JSON.parse(localStorage.getItem('pa_set')||'{}'));}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60)));}
@@ -138,6 +139,7 @@ function go(v){['home','form','chat','set'].forEach(x=>{const el=$('v-'+x);if(el
  $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();}
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('');}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
+ if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='free'){go('chat');$('inp').focus();return;}
  $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+s.f.map(f=>{
   const[k,ty,lab,opt]=f;
@@ -160,17 +162,31 @@ function copyMsg(i){navigator.clipboard.writeText(hist[i].content).then(()=>aler
 function scrollBottom(){setTimeout(()=>{document.querySelector('main').scrollTop=999999;},50);}
 function sendFree(){const t=$('inp').value.trim();if(!t)return;$('inp').value='';send(t);}
 async function send(text){
- if(!S.gkey&&!S.okey){go('set');alert('請先在設定填入至少一組 API Key（建議 Gemini，免費）');return;}
+ if(!S.gkey&&!S.okey){go('set');alert('請先在設定貼入至少一把 API Key（Gemini／Claude／OpenAI 擇一，Gemini 免費）');return;}
  hist.push({role:'user',content:text});saveHist();go('chat');renderMsgs();
  const tip=document.createElement('div');tip.className='typing';tip.textContent='思考中…';$('msgs').appendChild(tip);scrollBottom();
  try{const out=await aiCall();hist.push({role:'assistant',content:out});}
  catch(e){hist.push({role:'assistant',content:'❌ 呼叫失敗：'+e.message+'\n請到「設定」檢查 API Key 與模型名，或稍後再試。'});}
  saveHist();renderMsgs();}
+/* ───────── 校務系統資料橋接（同網域 localStorage） ───────── */
+function schoolData(){
+ const map={ck_staff:'教職員',ck_events:'行事曆',ck_training:'研習',cksch_grades:'年級班級'};
+ const out={};let any=false;
+ for(const k in map){try{const v=JSON.parse(localStorage.getItem(k)||'null');if(v==null)continue;any=true;
+  out[map[k]]=Array.isArray(v)?{筆數:v.length,資料:v.slice(0,40)}:v;}catch(e){}}
+ if(!any)return null;
+ let t=JSON.stringify(out);if(t.length>7000)t=t.slice(0,7000)+'…(已截斷)';
+ return t;}
+function getSys(){let t=SYS;
+ if(S.useSchool){const d=schoolData();
+  t+=d?'\n\n【校務系統即時資料（Young校務管理系統，僅供本次參考）】\n'+d
+      :'\n\n（使用者開啟了校務資料連接，但此瀏覽器尚無校務系統資料——回答時可提醒他先開啟校務系統一次）';}
+ return t;}
 /* ───────── AI 多供應商 ───────── */
 function ctx(){return hist.slice(-12);}
 async function callGemini(){
  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(S.gmodel)}:generateContent?key=${encodeURIComponent(S.gkey)}`;
- const body={system_instruction:{parts:[{text:SYS}]},contents:ctx().map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]})),generationConfig:{temperature:0.7,maxOutputTokens:4096}};
+ const body={system_instruction:{parts:[{text:getSys()}]},contents:ctx().map(m=>({role:m.role==='assistant'?'model':'user',parts:[{text:m.content}]})),generationConfig:{temperature:0.7,maxOutputTokens:4096}};
  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error('Gemini '+r.status+' '+(j.error?.message||''));}
  const j=await r.json();const t=j.candidates?.[0]?.content?.parts?.map(p=>p.text).join('')||'';
@@ -178,21 +194,38 @@ async function callGemini(){
 async function callOpenAI(){
  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
   headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.okey},
-  body:JSON.stringify({model:S.omodel,messages:[{role:'system',content:SYS},...ctx()],temperature:0.7,max_tokens:4096})});
+  body:JSON.stringify({model:S.omodel,messages:[{role:'system',content:getSys()},...ctx()],temperature:0.7,max_tokens:4096})});
  if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error('OpenAI '+r.status+' '+(j.error?.message||''));}
  const j=await r.json();const t=j.choices?.[0]?.message?.content||'';
  if(!t)throw new Error('OpenAI 回應為空');return t;}
+async function callClaude(){
+ const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+  headers:{'Content-Type':'application/json','x-api-key':S.akey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+  body:JSON.stringify({model:S.amodel,max_tokens:4096,system:getSys(),messages:ctx().map(m=>({role:m.role,content:m.content}))})});
+ if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error('Claude '+r.status+' '+(j.error?.message||''));}
+ const j=await r.json();const t=(j.content||[]).map(b=>b.text||'').join('');
+ if(!t)throw new Error('Claude 回應為空');return t;}
 async function aiCall(){
- const pvs=[];if(S.gkey)pvs.push(callGemini);if(S.okey)pvs.push(callOpenAI);
+ const pvs=[];if(S.gkey)pvs.push(callGemini);if(S.akey)pvs.push(callClaude);if(S.okey)pvs.push(callOpenAI);
  let last;for(const p of pvs){try{return await p();}catch(e){last=e;}}
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
-function loadSet(){$('gkey').value=S.gkey;$('okey').value=S.okey;$('gmodel').value=S.gmodel;$('omodel').value=S.omodel;pill();}
-function pill(){$('gs').textContent=S.gkey?'已設定':'未設定';$('gs').className='pill'+(S.gkey?' ok':'');
- $('os').textContent=S.okey?'已設定':'未設定';$('os').className='pill'+(S.okey?' ok':'');}
-function saveSet(){S.gkey=$('gkey').value.trim();S.okey=$('okey').value.trim();
- S.gmodel=$('gmodel').value.trim()||'gemini-2.5-flash';S.omodel=$('omodel').value.trim()||'gpt-4o-mini';
- localStorage.setItem('pa_set',JSON.stringify(S));pill();alert('已儲存');go('home');}
+const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI']];
+function detectKey(k){if(/^AIza/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
+function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));}
+function addKey(){const k=$('newkey').value.trim();if(!k)return;const d=detectKey(k);
+ if(!d){alert('無法識別這把金鑰。\nGemini 以 AIza 開頭\nClaude 以 sk-ant- 開頭\nOpenAI 以 sk- 開頭');return;}
+ S[d[0]]=k;saveS();$('newkey').value='';renderKeys();alert('已加入 '+d[2]+' 金鑰 ✓');}
+function delKey(f){if(confirm('移除這把金鑰？')){S[f]='';saveS();renderKeys();}}
+function setModel(mf,el){const v=el.value.trim();if(v)S[mf]=v;saveS();}
+function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],mf=r[1],nm=r[2];
+ if(!S[kf])return '<label>'+nm+' <span class="pill">未設定</span></label>';
+ var mask=S[kf].slice(0,7)+'…'+S[kf].slice(-4);
+ return '<label>'+nm+' <span class="pill ok">已設定</span> <span style="font-weight:400;color:var(--g400)">'+mask+'</span></label>'
+ +'<div style="display:flex;gap:8px"><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名，可改">'
+ +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
+}).join('');}
+function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
 renderCards();renderMsgs();
