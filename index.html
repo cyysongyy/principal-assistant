@@ -72,7 +72,8 @@ nav button .i{display:block;font-size:20px}
   <div id="v-set" class="view">
     <div class="set"><h3>🤖 AI 金鑰（存在本機瀏覽器，不會上傳）</h3>
       <label>貼上 API Key，自動識別廠牌（Gemini／Claude／OpenAI）</label>
-      <input type="text" id="newkey" placeholder="AIza…／sk-ant-…／sk-…" autocomplete="off">
+      <div style="display:flex;gap:8px"><select id="provsel" style="width:130px;padding:10px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">自動識別</option><option value="g">Gemini</option><option value="a">Claude</option><option value="o">OpenAI</option></select>
+      <input type="text" id="newkey" placeholder="貼上任何 API Key" autocomplete="off" style="flex:1"></div>
       <button class="btn" onclick="addKey()">＋ 加入金鑰（自動識別）</button>
       <div id="klist" style="margin-top:6px"></div>
       <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。呼叫順序 Gemini → Claude → OpenAI，失敗自動換下一家。模型名（2026-07 預設）可在各列直接修改。</div>
@@ -211,10 +212,12 @@ async function aiCall(){
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
 const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI']];
-function detectKey(k){if(/^AIza/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
+function detectKey(k){if(/^AIza/.test(k)||/^AQ\./.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
 function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));}
-function addKey(){const k=$('newkey').value.trim();if(!k)return;const d=detectKey(k);
- if(!d){alert('無法識別這把金鑰。\nGemini 以 AIza 開頭\nClaude 以 sk-ant- 開頭\nOpenAI 以 sk- 開頭');return;}
+function addKey(){const k=$('newkey').value.trim();if(!k)return;
+ const M={g:['gkey','gmodel','Gemini'],a:['akey','amodel','Claude'],o:['okey','omodel','OpenAI']};
+ const d=M[$('provsel').value]||detectKey(k);
+ if(!d){alert('自動識別不出這把金鑰（Gemini=AIza/AQ. 開頭、Claude=sk-ant-、OpenAI=sk-）。\n請用左邊選單手動指定廠牌後再按一次加入。');return;}
  S[d[0]]=k;saveS();$('newkey').value='';renderKeys();alert('已加入 '+d[2]+' 金鑰 ✓');}
 function delKey(f){if(confirm('移除這把金鑰？')){S[f]='';saveS();renderKeys();}}
 function setModel(mf,el){const v=el.value.trim();if(v)S[mf]=v;saveS();}
