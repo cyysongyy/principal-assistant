@@ -126,6 +126,14 @@ nav button .i{display:block;font-size:20px}
       <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
       <div class="hint">會讀取同網域「<a href="https://cyysongyy.github.io/CK-SCHADMIN/" target="_blank">Young校務管理系統</a>」存在此瀏覽器的資料（教職員、行事曆、研習、年級班級），讓 AI 的建議貼合你學校實況。注意：開啟後，這些資料會隨你的問題送到你設定的 AI 服務；且需在同一個瀏覽器使用過校務系統才有資料。</div>
     </div>
+    <div class="set"><h3>&#x1f4c2; &#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e;</h3>
+      <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">&#x8cbc;&#x4e0a; Google Drive &#x8cc7;&#x6599;&#x593e;&#x7db2;&#x5740;&#xff0c;&#x5728;&#x6703;&#x8b70;&#x529f;&#x80fd;&#x986f;&#x793a;&#x5feb;&#x901f;&#x958b;&#x555f;&#x6309;&#x9215;&#x3002;</p>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="meet-folder-url" placeholder="https://drive.google.com/drive/folders/..." style="flex:1;font-size:12px">
+        <button class="btn" onclick="saveMeetFolder()" style="white-space:nowrap">&#x5132;&#x5b58;</button>
+      </div>
+      <div id="meet-folder-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
+    </div>
     <div class="set"><h3>&#x1f4c5; Google &#x884c;&#x4e8b;&#x66c6;</h3>
       <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">貼上 Google 日曆的 ICS 私人網址，自動顯示今明行程。<br>取得方式：Google 日曆 → 設定 → 你的日曆 → 整合日曆 → <b>私人網址（iCal）</b></p>
       <div style="display:flex;gap:6px">
@@ -320,6 +328,16 @@ function getGcalEvents(ymd){
 })();
 
 
+
+/* meet folder */
+const MF_KEY='pa_meet_folder';
+function saveMeetFolder(){
+  const u=document.getElementById('meet-folder-url').value.trim();
+  localStorage.setItem(MF_KEY,u);
+  const st=document.getElementById('meet-folder-st');
+  if(st)st.textContent=u?'✓ 已儲存':'已清除';
+}
+
 /* Firebase records */
 const _FB_RC={apiKey:"AIzaSyCIy0n9kPZPtbRJiX_r1qTp8Faw3fNS2DE",authDomain:"young-app-library.firebaseapp.com",projectId:"young-app-library"};
 let _fbRD=null;
@@ -380,8 +398,10 @@ function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclic
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='free'){go('chat');$('inp').focus();return;}
+ var mfUrl=localStorage.getItem('pa_meet_folder')||'';
+ var meetRef=id==='meet'&&mfUrl?'<div style="margin-bottom:12px;padding:10px 12px;background:#e0f2fe;border-radius:10px;font-size:13px">&#x1f4c2; <a href="'+mfUrl+'" target="_blank" style="color:#0369a1;font-weight:600">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>':'';
  var crRef=id==='crisis'?'<div style="margin:0 0 12px;padding:10px 12px;background:#fff3cd;border-radius:10px;font-size:13px">&#x1f4cc; <b>&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x53c3;&#x8003;&#x4f9d;&#x64da;&#xff1a;</b><a href="https://cyysongyy.github.io/matrix-emotion/" target="_blank" style="color:#d97706">&#x958b;&#x555f;&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x5de5;&#x5177; &#x2197;</a></div>':'';
- $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+s.f.map(f=>{
+ $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+meetRef+s.f.map(f=>{
   const[k,ty,lab,opt]=f;
   if(ty==='sel')return`<label>${lab}</label><select id="f-${k}">${opt.map(o=>`<option>${o}</option>`).join('')}</select>`;
   if(ty==='ta')return`<label>${lab}</label><textarea id="f-${k}"></textarea>`;
@@ -470,7 +490,7 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');}
-function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;}
+function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
 
