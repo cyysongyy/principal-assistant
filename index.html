@@ -399,7 +399,11 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='free'){go('chat');$('inp').focus();return;}
  var mfUrl=localStorage.getItem('pa_meet_folder')||'';
- var meetRef=id==='meet'&&mfUrl?'<div style="margin-bottom:12px;padding:10px 12px;background:#e0f2fe;border-radius:10px;font-size:13px">&#x1f4c2; <a href="'+mfUrl+'" target="_blank" style="color:#0369a1;font-weight:600">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>':'';
+ var meetRef='';
+ if(id==='meet'){
+   if(mfUrl){meetRef='<div style="margin-bottom:12px;padding:10px 12px;background:#e0f2fe;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#x1f4c2;</span><a href="'+mfUrl+'" target="_blank" style="color:#0369a1;font-weight:600;font-size:14px">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>';}
+   else{meetRef='<div style="margin-bottom:12px;padding:10px 12px;background:#fef9c3;border-radius:10px;font-size:13px">&#x1f4c2; &#x8cc7;&#x6599;&#x593e;&#x672a;&#x8a2d;&#x5b9a; &mdash; <button class="btn btn2" style="font-size:12px;padding:4px 10px" onclick="go(\'set\')">&#x53bb;&#x8a2d;&#x5b9a;</button></div>';}
+ }
  var crRef=id==='crisis'?'<div style="margin:0 0 12px;padding:10px 12px;background:#fff3cd;border-radius:10px;font-size:13px">&#x1f4cc; <b>&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x53c3;&#x8003;&#x4f9d;&#x64da;&#xff1a;</b><a href="https://cyysongyy.github.io/matrix-emotion/" target="_blank" style="color:#d97706">&#x958b;&#x555f;&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x5de5;&#x5177; &#x2197;</a></div>':'';
  $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+meetRef+s.f.map(f=>{
   const[k,ty,lab,opt]=f;
