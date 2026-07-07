@@ -331,12 +331,34 @@ function getGcalEvents(ymd){
 
 /* meet folder */
 const MF_KEY='pa_meet_folder';
+const PA_CFG_DOC='pa_settings';
 function saveMeetFolder(){
   const u=document.getElementById('meet-folder-url').value.trim();
   localStorage.setItem(MF_KEY,u);
   const st=document.getElementById('meet-folder-st');
-  if(st)st.textContent=u?'✓ 已儲存':'已清除';
+  if(st)st.textContent=u?'✓ 已儲存，同步中…':'已清除';
+  if(_fbRD){
+    _fbRD.collection('pa_config').doc(PA_CFG_DOC).set({meetFolder:u},{merge:true})
+      .then(()=>{if(st)st.textContent=u?'✓ 已儲存並同步':'已清除';})
+      .catch(e=>{if(st)st.textContent='⚠️ 同步失敗：'+e.message;});
+  }
 }
+function syncMeetFolder(){
+  if(!_fbRD)return;
+  _fbRD.collection('pa_config').doc(PA_CFG_DOC).get().then(doc=>{
+    if(!doc.exists)return;
+    const u=doc.data().meetFolder||'';
+    if(u&&!localStorage.getItem(MF_KEY)){
+      localStorage.setItem(MF_KEY,u);
+      const el=document.getElementById('meet-folder-url');
+      if(el)el.value=u;
+      const st=document.getElementById('meet-folder-st');
+      if(st)st.textContent='✓ 已從雲端同步';
+    }
+  }).catch(()=>{});
+}
+// pull on load
+(function(){setTimeout(syncMeetFolder,2000);})();
 
 /* Firebase records */
 const _FB_RC={apiKey:"AIzaSyCIy0n9kPZPtbRJiX_r1qTp8Faw3fNS2DE",authDomain:"young-app-library.firebaseapp.com",projectId:"young-app-library"};
