@@ -603,3 +603,34 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 </script>
 </body>
 </html>
+
+<!-- ============================================================
+     校務資料完整存取 v1
+     讓「校長助理」AI 讀取校務系統「全部」即時資料
+     （教職員 / 行事曆 / 成績 / 行政業務 / 進修 / SEL），
+     取代原本只送 7000 字的截斷版本。
+     ============================================================ -->
+<script>
+(function(){
+  function get(k){ try{ return JSON.parse(localStorage.getItem(k)||'null'); }catch(e){ return localStorage.getItem(k)||null; } }
+  window.schoolData=function(){
+    var now=new Date(), y=now.getFullYear(), m=now.getMonth()+1;
+    var acad=(m>=8?y:y-1)-1911, sem=(m>=8||m<=1)?'上':'下';
+    var obj={
+      學校:'雲林縣北港鎮辰光國民小學',
+      今天:y+'/'+m+'/'+now.getDate(),
+      學年度學期:acad+'學年度'+sem+'學期',
+      說明:'以下為校務系統即時資料，請據此回答校長提問；涉及個資請謹慎處理，勿外洩。',
+      教職員:get('ck_staff'),
+      行事曆:get('ck_events'),
+      學生成績:get('cksch_grades'),
+      行政業務:get('ck_admin'),
+      教師進修:get('ck_training'),
+      SEL校本課程:get('ck_sel')
+    };
+    var s=JSON.stringify(obj);
+    if(s.length>200000) s=s.slice(0,200000)+'…(資料過長已截斷)';
+    return s;
+  };
+})();
+</script>
