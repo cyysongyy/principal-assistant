@@ -96,6 +96,8 @@ nav button .i{display:block;font-size:20px}
 .pl-key.empty{background:transparent;pointer-events:none}
 .pl-hint{font-size:.72rem;color:#818cf8;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 </style>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div id="pin-lock"><div class="pl-icon">&#x1f393;</div><div class="pl-title">&#x6821;&#x9577;&#x52a9;&#x7406;</div><div class="pl-sub" id="pl-sub">&#x8acb;&#x8f38;&#x5165; PIN &#x78bc;</div><div class="pl-dots"><div class="pl-dot" id="pd0"></div><div class="pl-dot" id="pd1"></div><div class="pl-dot" id="pd2"></div><div class="pl-dot" id="pd3"></div></div><div class="pl-err" id="pl-err"></div><div class="pl-pad" id="pl-pad" data-step="verify"><button class="pl-key" onclick="plKey('1')">1</button><button class="pl-key" onclick="plKey('2')">2</button><button class="pl-key" onclick="plKey('3')">3</button><button class="pl-key" onclick="plKey('4')">4</button><button class="pl-key" onclick="plKey('5')">5</button><button class="pl-key" onclick="plKey('6')">6</button><button class="pl-key" onclick="plKey('7')">7</button><button class="pl-key" onclick="plKey('8')">8</button><button class="pl-key" onclick="plKey('9')">9</button><button class="pl-key empty"></button><button class="pl-key" onclick="plKey('0')">0</button><button class="pl-key" onclick="plDel()">&#x232b;</button></div><div class="pl-hint" id="pl-hint" onclick="plForgot()">&#x5fcd;&#x8a18; PIN&#xff1f;&#x91cd;&#x8a2d;</div></div>
@@ -142,6 +144,8 @@ nav button .i{display:block;font-size:20px}
       <button class="btn btn2" onclick="clearHist()">清除全部對話記錄</button>
     </div>
   </div>
+  <!-- rec -->
+  <div id="v-rec" class="view"><div style="display:flex;gap:8px;padding:0 0 12px;flex-wrap:wrap;align-items:center"><select id="rec-filter" onchange="renderRec()" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">&#x5168;&#x90e8;&#x985e;&#x578b;</option><option value="doc">&#x1f4c4; &#x516c;&#x6587;&#x8207;&#x7c3d;&#x5448;</option><option value="crisis">&#x1f6a8; &#x6821;&#x5b89;&#x8207;&#x5371;&#x6a5f;</option></select><button class="btn btn2" onclick="syncRec()" style="white-space:nowrap">&#x2601;&#xfe0f; &#x540c;&#x6b65;</button><button class="btn btn2" onclick="exportRec()" style="white-space:nowrap">&#x1f4e5; &#x5319;&#x51fa;</button></div><div id="rec-sync-st" style="font-size:12px;color:var(--g400);margin-bottom:8px"></div><div id="rec-list"></div></div>
 </main>
 <div class="inputbar" id="bar">
   <textarea id="inp" placeholder="繼續追問或補充…" rows="1"></textarea>
@@ -150,6 +154,7 @@ nav button .i{display:block;font-size:20px}
 <nav>
   <button id="n-home" class="on" onclick="go('home')"><span class="i">🏠</span>情境</button>
   <button id="n-chat" onclick="go('chat')"><span class="i">💬</span>對話</button>
+  <button id="n-rec" onclick="go('rec')"><span class="i">&#x1f5c4;&#xfe0f;</span>&#x7d00;&#x9304;</button>
   <button id="n-set" onclick="go('set')"><span class="i">⚙️</span>設定</button>
 </nav>
 <script>
@@ -159,10 +164,7 @@ const SCN=[
    ['occ','text','場合（例：畢業典禮、模範生表揚）'],['aud','text','對象（例：六年級生＋家長）'],
    ['len','sel','長度',['1 分鐘','3 分鐘','5 分鐘','10 分鐘']],['pts','ta','想帶到的重點（人事物、故事、感謝名單…）']],
    p:(v)=>`請幫我寫一份校長致詞稿。場合：${v.occ}；對象：${v.aud}；長度約 ${v.len}。想帶到的重點：${v.pts||'由你建議'}。要求：口語自然、有畫面感、避免陳腔濫調，結尾有記憶點；先給講稿，再附 3 行「上台提示」。`},
- {id:'doc',emo:'📄',t:'公文與簽呈',d:'函稿、簽、公告、回覆上級',f:[
-   ['typ','sel','類型',['簽（陳核）','函稿','校內公告','回覆教育局處來文']],['sub','text','事由（一句話）'],
-   ['pts','ta','要點與背景（越具體越好）'],['tone','sel','語氣',['正式','正式但精簡','稍軟性（對家長）']]],
-   p:(v)=>`請以台灣學校行政公文慣例，幫我草擬「${v.typ}」。事由：${v.sub}。要點與背景：${v.pts}。語氣：${v.tone}。要求：符合公文程式用語（主旨/說明/擬辦視類型），條列清楚；最後提醒我需自行確認的法規或程序（若有）。`},
+
  {id:'parent',emo:'👨‍👩‍👧',t:'家長溝通',d:'投訴回應、溝通信、面談稿',f:[
    ['sit','ta','情境描述（發生什麼事、家長的訴求）'],['ch','sel','形式',['LINE/簡訊回覆','正式信件','面談talking points','電話腳本']],
    ['goal','text','你希望達到的結果']],
@@ -179,6 +181,10 @@ const SCN=[
  {id:'plan',emo:'🏫',t:'計畫與文案',d:'計畫書、新聞稿、活動文案',f:[
    ['sub','text','主題（例：雙語計畫申請、校慶新聞稿）'],['aud','text','給誰看（教育局/家長/媒體/全校）'],['pts','ta','素材與重點']],
    p:(v)=>`請幫我產出「${v.sub}」，讀者是：${v.aud}。素材：${v.pts}。要求：先給架構、再給全文；量化成效處留【待填數字】，不要編造數據。`},
+ {id:'doc',emo:'📄',t:'公文與簽呈',d:'函稿、簽、公告、回覆上級',f:[
+   ['typ','sel','類型',['簽（陳核）','函稿','校內公告','回覆教育局處來文']],['sub','text','事由（一句話）'],
+   ['pts','ta','要點與背景（越具體越好）'],['tone','sel','語氣',['正式','正式但精簡','稍軟性（對家長）']]],
+   p:(v)=>`請以台灣學校行政公文慣例，幫我草擬「${v.typ}」。事由：${v.sub}。要點與背景：${v.pts}。語氣：${v.tone}。要求：符合公文程式用語（主旨/說明/擬辦視類型），條列清楚；最後提醒我需自行確認的法規或程序（若有）。`},
  {id:'sch',emo:'🏫',t:'校務系統',d:'開啟 Young 校務管理系統',f:[],p:null},
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
@@ -194,9 +200,9 @@ function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60
 const SYS=`你是台灣中小學校長的資深幕僚長（主任祕書等級），熟悉台灣教育現場、教育部與縣市教育局處行政慣例、公文程式與校園法規框架。一律使用繁體中文（台灣用語）回覆。原則：1) 給可直接使用的成品，不要只給建議清單，除非使用者只要建議。2) 涉及法規、通報、人事、採購等有法律效果的內容，結尾標註「⚠️ 請以現行法規與主管機關函釋為準」並點名該查什麼。3) 不編造數據、名字與法條號；不確定就寫【待查證】。4) 語氣專業溫暖，符合教育工作者身分。`;
 /* ───────── 畫面 ───────── */
 const $=id=>document.getElementById(id);
-function go(v){['home','form','chat','set'].forEach(x=>{const el=$('v-'+x);if(el)el.classList.toggle('active',x===v);});
- ['home','chat','set'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
- $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();}
+function go(v){['home','form','chat','set','rec'].forEach(x=>{const el=$('v-'+x);if(el)el.classList.toggle('active',x===v);});
+ ['home','chat','set','rec'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
+ $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();if(v==='rec')renderRec();}
 function getTodayYmd(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function getTomYmd(){const t=new Date();t.setDate(t.getDate()+1);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function getEventsForDay(ymd){
@@ -313,11 +319,69 @@ function getGcalEvents(ymd){
   if(!c.ts||Date.now()-c.ts>30*60*1000)fetchGcal(false);
 })();
 
+
+/* Firebase records */
+const _FB_RC={apiKey:"AIzaSyCIy0n9kPZPtbRJiX_r1qTp8Faw3fNS2DE",authDomain:"young-app-library.firebaseapp.com",projectId:"young-app-library"};
+let _fbRD=null;
+(function(){try{const a=firebase.initializeApp(_FB_RC,'pa-rec');_fbRD=firebase.firestore(a);_fbRD.settings({experimentalForceLongPolling:true});}catch(e){console.warn('fbRD:',e);}})();
+const RK='pa_rec_v2';
+function loadRecs(){try{return JSON.parse(localStorage.getItem(RK)||'[]');}catch(e){return[];}}
+function saveRecs(a){localStorage.setItem(RK,JSON.stringify(a));}
+function saveRecord(type,title,formData,out){
+  const r={id:'r'+Date.now(),ts:Date.now(),type,title:(title||'').slice(0,80)||type,preview:(out||'').slice(0,200),full:out||'',formData:formData||{}};
+  const a=loadRecs();a.unshift(r);if(a.length>200)a.length=200;saveRecs(a);
+  if(_fbRD)_fbRD.collection('pa_records').doc(r.id).set({...r,device:navigator.userAgent.slice(0,60)}).catch(e=>console.warn(e));
+  const st=$('rec-sync-st');if(st)st.textContent='✓ 已儲存：'+r.title;
+}
+async function syncRec(){
+  const st=$('rec-sync-st');if(!_fbRD){if(st)st.textContent='⚠️未連線';return;}
+  if(st)st.textContent='同步中…';
+  try{
+    const sn=await _fbRD.collection('pa_records').orderBy('ts','desc').limit(200).get();
+    const cl=[];sn.forEach(d=>cl.push(d.data()));
+    const lo=loadRecs();const mg={};[...lo,...cl].forEach(r=>{if(r&&r.id&&(!mg[r.id]||r.ts>mg[r.id].ts))mg[r.id]=r;});
+    const arr=Object.values(mg).sort((a,b)=>b.ts-a.ts).slice(0,200);saveRecs(arr);renderRec();
+    if(st)st.textContent='✓ 已同步 '+arr.length+' 筆，'+new Date().toLocaleTimeString();
+  }catch(e){if(st)st.textContent='⚠️失敗：'+e.message;}
+}
+function exportRec(){
+  const a=loadRecs();if(!a.length){alert('目前沒有紀錄');return;}
+  const txt=a.map(r=>'=== '+new Date(r.ts).toLocaleString('zh-TW')+' | '+(r.type==='doc'?'公文與簽呈':'校安與危機')+' | '+r.title+' ===\n'+r.full+'\n').join('\n');
+  const b=new Blob([txt],{type:'text/plain;charset=utf-8'});const a2=document.createElement('a');a2.href=URL.createObjectURL(b);a2.download='校長紀錄_'+new Date().toISOString().slice(0,10)+'.txt';a2.click();
+}
+function delRec(id){
+  if(!confirm('確定刪除？'))return;
+  saveRecs(loadRecs().filter(r=>r.id!==id));
+  if(_fbRD)_fbRD.collection('pa_records').doc(id).delete().catch(()=>{});
+  renderRec();
+}
+function toggleRecFull(id){const e=document.getElementById('rec-full-'+id);if(e)e.style.display=e.style.display==='none'?'block':'none';}
+function renderRec(){
+  const flt=$('rec-filter')?$('rec-filter').value:'';
+  let a=loadRecs();if(flt)a=a.filter(r=>r.type===flt);
+  const L=$('rec-list');if(!L)return;
+  if(!a.length){L.innerHTML='<div style="text-align:center;color:var(--g400);padding:40px">目前沒有紀錄<br><small>使用公文與簽呈或校安與危機功能後自動儲存</small></div>';return;}
+  const eh=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  L.innerHTML=a.map(r=>{
+    const d=new Date(r.ts).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const lb=r.type==='doc'?'📄':'🚨';
+    return '<div style="background:var(--g50);border:1px solid var(--g200);border-radius:12px;padding:14px;margin-bottom:10px">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+lb+' '+eh(r.title)+'</b><span style="font-size:11px;color:var(--g400);white-space:nowrap">'+d+'</span></div>'
+      +'<div style="font-size:12px;color:var(--g600);margin-top:6px;line-height:1.5">'+eh(r.preview)+(r.full.length>200?'…':'')+'</div>'
+      +'<div id="rec-full-'+r.id+'" style="display:none;margin-top:8px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-top:1px solid var(--g200);padding-top:8px">'+eh(r.full)+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px">'
+      +'<button class="btn btn2" style="flex:1;font-size:12px" onclick="toggleRecFull(\''+r.id+'\')">&#x5c55;&#x958b;&#x5168;&#x6587;</button>'
+      +'<button class="btn btn2" style="font-size:12px;color:#ef4444" onclick="delRec(\''+r.id+'\')">&#x522a;&#x9664;</button>'
+      +'</div></div>';
+  }).join('');
+}
+
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='free'){go('chat');$('inp').focus();return;}
- $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+s.f.map(f=>{
+ var crRef=id==='crisis'?'<div style="margin:0 0 12px;padding:10px 12px;background:#fff3cd;border-radius:10px;font-size:13px">&#x1f4cc; <b>&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x53c3;&#x8003;&#x4f9d;&#x64da;&#xff1a;</b><a href="https://cyysongyy.github.io/matrix-emotion/" target="_blank" style="color:#d97706">&#x958b;&#x555f;&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x5de5;&#x5177; &#x2197;</a></div>':'';
+ $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+s.f.map(f=>{
   const[k,ty,lab,opt]=f;
   if(ty==='sel')return`<label>${lab}</label><select id="f-${k}">${opt.map(o=>`<option>${o}</option>`).join('')}</select>`;
   if(ty==='ta')return`<label>${lab}</label><textarea id="f-${k}"></textarea>`;
@@ -327,6 +391,7 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
 function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=false;
  s.f.forEach(f=>{const el=$('f-'+f[0]);v[f[0]]=(el.value||'').trim();if(f[1]!=='ta'&&!v[f[0]])miss=true;});
  if(miss){alert('必填欄位還沒填喔');return;}
+ if(id==='doc'||id==='crisis'){window._pendingRec={type:id,title:v.sub||v.sit||v.typ||s.t,formData:v};}
  send(s.p(v));}
 /* ───────── 對話 ───────── */
 function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
@@ -341,7 +406,7 @@ async function send(text){
  if(!S.gkey&&!S.okey){go('set');alert('請先在設定貼入至少一把 API Key（Gemini／Claude／OpenAI 擇一，Gemini 免費）');return;}
  hist.push({role:'user',content:text});saveHist();go('chat');renderMsgs();
  const tip=document.createElement('div');tip.className='typing';tip.textContent='思考中…';$('msgs').appendChild(tip);scrollBottom();
- try{const out=await aiCall();hist.push({role:'assistant',content:out});}
+ try{const out=await aiCall();hist.push({role:'assistant',content:out});if(window._pendingRec){saveRecord(window._pendingRec.type,window._pendingRec.title,window._pendingRec.formData,out);window._pendingRec=null;}}
  catch(e){hist.push({role:'assistant',content:'❌ 呼叫失敗：'+e.message+'\n請到「設定」檢查 API Key 與模型名，或稍後再試。'});}
  saveHist();renderMsgs();}
 /* ───────── 校務系統資料橋接（同網域 localStorage） ───────── */
