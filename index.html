@@ -98,6 +98,8 @@ nav button .i{display:block;font-size:20px}
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 <div id="pin-lock"><div class="pl-icon">&#x1f393;</div><div class="pl-title">&#x6821;&#x9577;&#x52a9;&#x7406;</div><div class="pl-sub" id="pl-sub">&#x8acb;&#x8f38;&#x5165; PIN &#x78bc;</div><div class="pl-dots"><div class="pl-dot" id="pd0"></div><div class="pl-dot" id="pd1"></div><div class="pl-dot" id="pd2"></div><div class="pl-dot" id="pd3"></div></div><div class="pl-err" id="pl-err"></div><div class="pl-pad" id="pl-pad" data-step="verify"><button class="pl-key" onclick="plKey('1')">1</button><button class="pl-key" onclick="plKey('2')">2</button><button class="pl-key" onclick="plKey('3')">3</button><button class="pl-key" onclick="plKey('4')">4</button><button class="pl-key" onclick="plKey('5')">5</button><button class="pl-key" onclick="plKey('6')">6</button><button class="pl-key" onclick="plKey('7')">7</button><button class="pl-key" onclick="plKey('8')">8</button><button class="pl-key" onclick="plKey('9')">9</button><button class="pl-key empty"></button><button class="pl-key" onclick="plKey('0')">0</button><button class="pl-key" onclick="plDel()">&#x232b;</button></div><div class="pl-hint" id="pl-hint" onclick="plForgot()">&#x5fcd;&#x8a18; PIN&#xff1f;&#x91cd;&#x8a2d;</div></div>
@@ -181,7 +183,7 @@ const SCN=[
  {id:'meet',emo:'📋',t:'會議',d:'主持稿、議程、紀錄整理',f:[
    ['typ','text','會議類型（例：校務會議、導師會報）'],['need','sel','需要',['開場與主持稿','議程草案','會議紀錄整理（貼原稿）','困難議題的引導話術']],['pts','ta','議題內容或原始紀錄']],
    p:(v)=>`會議：${v.typ}。需要：${v.need}。內容：${v.pts}。要求：結構清楚可直接使用；若是紀錄整理，輸出為「決議事項/待辦（負責人+期限欄位）/追蹤事項」三段。`},
- {id:'staff',emo:'🧑‍🏫',t:'教師與人事',d:'考核評語、面談、衝突協調',f:[
+ {id:'staff',emo:'🧑‍🏫',t:'教師與人事',d:'考核評語、面談、衝突協調、微觀政治',f:[
    ['sit','ta','情境（教師表現、衝突、需求…用代稱）'],['need','sel','需要',['考核/推薦評語','一對一面談要點','衝突協調方案','輔導與支持建議']]],
    p:(v)=>`校內人事情境：${v.sit}。請給我「${v.need}」。要求：具體可執行、顧及士氣與程序正義；涉及考核或不適任處理程序時，提醒我相關法定程序需查證現行規定。`},
  {id:'crisis',emo:'🚨',t:'校安與危機',d:'事件處置步驟、通報、對外說明',f:[
@@ -364,6 +366,63 @@ function syncMeetFolder(){
 const _FB_RC={apiKey:"AIzaSyCIy0n9kPZPtbRJiX_r1qTp8Faw3fNS2DE",authDomain:"young-app-library.firebaseapp.com",projectId:"young-app-library"};
 let _fbRD=null;
 (function(){try{const a=firebase.initializeApp(_FB_RC,'pa-rec');_fbRD=firebase.firestore(a);_fbRD.settings({experimentalForceLongPolling:true});}catch(e){console.warn('fbRD:',e);}})();
+
+/* ── Micro-politics 事件資料（Firebase RTDB，ck-schadmin 專案，需 Google 白名單登入） ──
+   以預設 app 名稱初始化 → 與同網域的 micro-politics / CK-SCHADMIN 共用登入狀態 */
+const _MP_CFG={apiKey:"AIzaSyAj1xigGCfdDFr4UQ_NtEaINoH5jj6sTIA",authDomain:"ck-schadmin.firebaseapp.com",projectId:"ck-schadmin",databaseURL:"https://ck-schadmin-default-rtdb.firebaseio.com"};
+let _mpApp=null,_mpAuth=null,_mpUser=null;
+(function(){try{
+  _mpApp=firebase.initializeApp(_MP_CFG);
+  _mpAuth=_mpApp.auth();
+  _mpAuth.onAuthStateChanged(u=>{_mpUser=u;mpUpdateStatus();});
+}catch(e){console.warn('mpFB:',e);}})();
+function mpLogin(){
+  if(!_mpAuth)return;
+  const pv=new firebase.auth.GoogleAuthProvider();
+  _mpAuth.signInWithPopup(pv).catch(e=>{
+    if(e&&e.code==='auth/popup-blocked'){_mpAuth.signInWithRedirect(pv);return;}
+    const st=$('mp-st');if(st)st.innerHTML='❌ 登入失敗：'+esc(e.message||String(e));
+  });
+}
+async function mpEvents(){
+  if(!_mpApp||!_mpUser)return[];
+  const snap=await _mpApp.database().ref('microPolitics/events').once('value');
+  const arr=Object.values(snap.val()||{}).filter(e=>e&&typeof e==='object');
+  arr.sort((a,b)=>String(a.created_at||a.time||'').localeCompare(String(b.created_at||b.time||''))); // 舊→新
+  return arr;
+}
+async function mpUpdateStatus(){
+  const st=$('mp-st');if(!st)return;
+  if(!_mpApp){st.textContent='⚠️ Firebase 未載入';return;}
+  if(!_mpUser){st.innerHTML='⚠️ 未登入 — <button class="btn btn2" style="display:inline-block;width:auto;margin:0;padding:4px 12px;font-size:12px" onclick="mpLogin()">🔐 登入 Google</button>';return;}
+  try{const evs=await mpEvents();st.textContent=`✅ 已連接（${_mpUser.email}），共 ${evs.length} 筆事件`;}
+  catch(e){st.textContent='❌ 讀取失敗：'+(e.message||e);}
+}
+async function mpContext(){
+  try{
+    const evs=await mpEvents();
+    if(!evs.length)return'';
+    const sev={重大:0,高:0,中:0,低:0};const person={};
+    evs.forEach(e=>{const s=e.severity||'低';if(sev[s]!==undefined)sev[s]++;
+      (e.students||'').split(/[,，]/).map(x=>x.trim()).filter(Boolean).forEach(n=>{person[n]=(person[n]||0)+1;});});
+    const top=Object.entries(person).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([n,c])=>`${n}×${c}`).join('、');
+    const unresolved=evs.filter(e=>(e.severity==='高'||e.severity==='重大')&&e.evStatus!=='resolved');
+    const recent=evs.slice(-25).map(e=>`- [${String(e.created_at||e.time||'').slice(0,10)}][${e.severity||'?'}] ${e.students||'未填'}｜${(e.desc||'').replace(/\s+/g,' ').slice(0,90)}`).join('\n');
+    let profiles='';
+    try{const p=JSON.parse(localStorage.getItem('mp_profiles_v1')||'null');
+      if(Array.isArray(p)&&p.length)profiles='人物背景：\n'+p.map(x=>`${x.label}：${x.desc}`).join('\n')+'\n';}catch(e){}
+    let t=`【Micro-politics 微觀政治事件系統資料（機密，僅供本次分析，個資請謹慎處理）】
+共 ${evs.length} 筆｜重大 ${sev['重大']}｜高 ${sev['高']}｜中 ${sev['中']}｜低 ${sev['低']}
+人物出現頻率：${top||'—'}
+未解決高風險事件：${unresolved.length} 筆
+${profiles}最近事件（舊→新，最多25筆）：
+${recent}
+
+請將上述事件紀錄與本次情境「合併分析」：先指出與本情境相關的歷史模式、人際動態與潛在風險，再給出具體建議。`;
+    if(t.length>9000)t=t.slice(0,9000)+'…(截斷)';
+    return t;
+  }catch(e){console.warn('mpContext:',e);return'';}
+}
 const RK='pa_rec_v2';
 function loadRecs(){try{return JSON.parse(localStorage.getItem(RK)||'[]');}catch(e){return[];}}
 function saveRecs(a){localStorage.setItem(RK,JSON.stringify(a));}
@@ -427,18 +486,31 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
    else{meetRef='<div style="margin-bottom:12px;padding:10px 12px;background:#fef9c3;border-radius:10px;font-size:13px">&#x1f4c2; &#x8cc7;&#x6599;&#x593e;&#x672a;&#x8a2d;&#x5b9a; &mdash; <button class="btn btn2" style="font-size:12px;padding:4px 10px" onclick="go(\'set\')">&#x53bb;&#x8a2d;&#x5b9a;</button></div>';}
  }
  var crRef=id==='crisis'?'<div style="margin:0 0 12px;padding:10px 12px;background:#fff3cd;border-radius:10px;font-size:13px">&#x1f4cc; <b>&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x53c3;&#x8003;&#x4f9d;&#x64da;&#xff1a;</b><a href="https://cyysongyy.github.io/matrix-emotion/" target="_blank" style="color:#d97706">&#x958b;&#x555f;&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x5de5;&#x5177; &#x2197;</a></div>':'';
- $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+meetRef+s.f.map(f=>{
+ var mpRef='';
+ if(id==='staff'){
+   mpRef='<div style="margin:0 0 12px;padding:10px 12px;background:#ede9fe;border-radius:10px;font-size:13px;line-height:1.6">'
+     +'🧭 <b>Micro-politics 微觀政治事件</b>　<a href="https://cyysongyy.github.io/micro-politics/" target="_blank" style="color:#6d28d9">開啟系統 ↗</a>'
+     +'<div id="mp-st" style="margin-top:4px;color:#6d28d9">檢查連線中…</div>'
+     +'<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:600"><input type="checkbox" id="mp-use" checked style="width:16px;height:16px"> 附上事件總體資料給 AI 合併分析</label>'
+     +'</div>';
+   setTimeout(mpUpdateStatus,50);
+ }
+ $('formbox').innerHTML='<h2>'+s.emo+' '+s.t+'</h2>'+crRef+meetRef+mpRef+s.f.map(f=>{
   const[k,ty,lab,opt]=f;
   if(ty==='sel')return`<label>${lab}</label><select id="f-${k}">${opt.map(o=>`<option>${o}</option>`).join('')}</select>`;
   if(ty==='ta')return`<label>${lab}</label><textarea id="f-${k}"></textarea>`;
   return`<label>${lab}</label><input type="text" id="f-${k}">`;
  }).join('')+`<button class="btn" onclick="submitScn('${id}')">✨ 產生</button><button class="btn btn2" onclick="go('home')">返回</button>`;
  go('form');}
-function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=false;
+async function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=false;
  s.f.forEach(f=>{const el=$('f-'+f[0]);v[f[0]]=(el.value||'').trim();if(f[1]!=='ta'&&!v[f[0]])miss=true;});
  if(miss){alert('必填欄位還沒填喔');return;}
  if(id==='doc'||id==='crisis'){window._pendingRec={type:id,title:v.sub||v.sit||v.typ||s.t,formData:v};}
- send(s.p(v));}
+ let prompt=s.p(v);
+ if(id==='staff'){const cb=$('mp-use');
+   if(cb&&cb.checked){const c=await mpContext();if(c)prompt+='\n\n'+c;
+     else if(!_mpUser)alert('提示：尚未登入 Micro-politics（Google 帳戶），本次將不附事件資料。');}}
+ send(prompt);}
 /* ───────── 對話 ───────── */
 function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function renderMsgs(){$('msgs').innerHTML=hist.map((m,i)=>{
