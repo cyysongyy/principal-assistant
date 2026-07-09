@@ -904,3 +904,18 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   setTimeout(retagCard,800); setTimeout(retagCard,2000);
 })();
 </script>
+
+<!-- 想法與心法：版面微調 — 面板往上，方便輸入 -->
+<script>
+(function(){
+  function up(){
+    var ov=[].slice.call(document.querySelectorAll('body>div')).filter(function(d){ return d.style&&d.style.position==='fixed'&&/想法與心法/.test(d.textContent); }).pop();
+    if(!ov) return;
+    ov.style.alignItems='flex-start';
+    var box=ov.firstElementChild;
+    if(box){ box.style.borderRadius='0 0 18px 18px'; box.style.maxHeight='90vh'; }
+  }
+  var _o=window.openIdeas;
+  if(typeof _o==='function'){ window.openIdeas=function(){ _o.apply(this,arguments); setTimeout(up,0); }; }
+})();
+</script>
