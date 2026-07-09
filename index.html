@@ -77,24 +77,19 @@ nav button .i{display:block;font-size:20px}
 .tc-save{background:#16a34a;color:#fff}
 .tc-cancel{background:#f3f4f6;color:#374151}
 
-/* PIN LOCK */
+/* GOOGLE AUTH LOCK */
 #pin-lock{position:fixed;inset:0;z-index:999;background:#1e1b4b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
 #pin-lock.off{display:none}
 .pl-icon{font-size:3rem}
 .pl-title{font-size:1.3rem;font-weight:800;color:#e0e7ff}
-.pl-sub{font-size:.82rem;color:#818cf8}
-.pl-dots{display:flex;gap:14px}
-.pl-dot{width:14px;height:14px;border-radius:50%;border:2px solid #4f46e5;background:transparent;transition:.15s}
-.pl-dot.on{background:#818cf8;border-color:#818cf8}
-.pl-dot.err{background:#ef4444;border-color:#ef4444}
-.pl-dot.ok{background:#10b981;border-color:#10b981}
+.pl-sub{font-size:.82rem;color:#818cf8;text-align:center;max-width:280px;line-height:1.5}
 .pl-err{font-size:.78rem;color:#f87171;min-height:18px;text-align:center}
-.pl-pad{display:grid;grid-template-columns:repeat(3,68px);gap:10px}
-.pl-key{width:68px;height:68px;border-radius:50%;border:none;background:rgba(255,255,255,.08);color:#e0e7ff;font-size:1.35rem;font-weight:600;cursor:pointer;transition:.12s;user-select:none}
-.pl-key:hover{background:rgba(255,255,255,.15)}
-.pl-key:active{transform:scale(.88)}
-.pl-key.empty{background:transparent;pointer-events:none}
-.pl-hint{font-size:.72rem;color:#818cf8;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.g-signin-btn{display:flex;align-items:center;gap:10px;padding:13px 24px;background:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;color:#1f2937;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);transition:.15s}
+.g-signin-btn:hover{box-shadow:0 4px 14px rgba(0,0,0,.35);transform:translateY(-1px)}
+.g-signin-btn:active{transform:scale(.97)}
+.g-signin-btn svg{width:20px;height:20px;flex-shrink:0}
+.pl-spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top-color:#818cf8;border-radius:50%;animation:spin .7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -102,7 +97,17 @@ nav button .i{display:block;font-size:20px}
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
-<div id="pin-lock"><div class="pl-icon">&#x1f393;</div><div class="pl-title">&#x6821;&#x9577;&#x52a9;&#x7406;</div><div class="pl-sub" id="pl-sub">&#x8acb;&#x8f38;&#x5165; PIN &#x78bc;</div><div class="pl-dots"><div class="pl-dot" id="pd0"></div><div class="pl-dot" id="pd1"></div><div class="pl-dot" id="pd2"></div><div class="pl-dot" id="pd3"></div></div><div class="pl-err" id="pl-err"></div><div class="pl-pad" id="pl-pad" data-step="verify"><button class="pl-key" onclick="plKey('1')">1</button><button class="pl-key" onclick="plKey('2')">2</button><button class="pl-key" onclick="plKey('3')">3</button><button class="pl-key" onclick="plKey('4')">4</button><button class="pl-key" onclick="plKey('5')">5</button><button class="pl-key" onclick="plKey('6')">6</button><button class="pl-key" onclick="plKey('7')">7</button><button class="pl-key" onclick="plKey('8')">8</button><button class="pl-key" onclick="plKey('9')">9</button><button class="pl-key empty"></button><button class="pl-key" onclick="plKey('0')">0</button><button class="pl-key" onclick="plDel()">&#x232b;</button></div><div class="pl-hint" id="pl-hint" onclick="plForgot()">&#x5fcd;&#x8a18; PIN&#xff1f;&#x91cd;&#x8a2d;</div></div>
+<div id="pin-lock">
+  <div class="pl-icon">🎓</div>
+  <div class="pl-title">校長助理</div>
+  <div class="pl-sub" id="pl-sub">請以 Google 帳號登入<br>僅限授權帳號使用</div>
+  <div class="pl-spinner" id="pl-spinner"></div>
+  <button class="g-signin-btn" id="g-signin-btn" onclick="doGoogleLogin()">
+    <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>
+    使用 Google 帳號登入
+  </button>
+  <div class="pl-err" id="pl-err"></div>
+</div>
 <header><span style="font-size:24px">🎓</span><h1>校長助理<div class="sub">你的 AI 幕僚長・疑難雜症一起想</div></h1></header>
 <main>
   <!-- 首頁 -->
@@ -148,7 +153,7 @@ nav button .i{display:block;font-size:20px}
       </div>
       <div id="gcal-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
     </div>
-    <div class="set"><h3>&#x1f510; PIN &#x5bc6;&#x78bc;</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">&#x4fee;&#x6539;&#x958b;&#x555f; App &#x6240;&#x9700;&#x7684; 4 &#x4f4d; PIN</p><button class="btn btn2" onclick="changePinFlow()">&#x4fee;&#x6539; PIN</button></div>
+    <div class="set"><h3>🔐 帳號</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">目前以 Google 帳號登入保護，僅 cyysongyy@gmail.com 可使用。</p><button class="btn btn2" onclick="doSignOut()">登出</button></div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
       <button class="btn btn2" onclick="clearHist()">清除全部對話記錄</button>
@@ -594,83 +599,63 @@ function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=lo
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
 
+/* ── Google Auth ── */
 (function(){
-var PIN_KEY='pa_pin';
-var buf='';
-function getPin(){return localStorage.getItem(PIN_KEY)||'';}
-function dots(cls){
-  for(var i=0;i<4;i++){
-    var d=document.getElementById('pd'+i);
-    d.className='pl-dot'+(i<buf.length?' on':'')+(cls?' '+cls:'');
+  var ALLOWED='cyysongyy@gmail.com';
+  var _auth=null;
+  try{
+    var _fbApp=firebase.app('pa-rec');
+    _auth=firebase.auth(_fbApp);
+  }catch(e){
+    try{_auth=firebase.auth();}catch(e2){console.warn('auth init:',e2);}
   }
-}
-function unlock(){document.getElementById('pin-lock').classList.add('off');}
-function setMode(mode){
-  var sub=document.getElementById('pl-sub');
-  var pad=document.getElementById('pl-pad');
-  var hint=document.getElementById('pl-hint');
-  var err=document.getElementById('pl-err');
-  buf='';dots();err.textContent='';
-  if(mode==='verify'){
-    sub.textContent='請輸入 PIN 碼';
-    pad.setAttribute('data-step','verify');
-    hint.style.display='block';
-  } else if(mode==='set1'){
-    sub.textContent='首次使用，請設定 4 位 PIN';
-    pad.setAttribute('data-step','set1');
-    hint.style.display='none';
-    window._pinSet1='';
-  } else if(mode==='set2'){
-    sub.textContent='再輸入一次確認';
-    pad.setAttribute('data-step','set2');
-    hint.style.display='none';
-  }
-}
-// init
-if(getPin()){setMode('verify');}else{setMode('set1');}
 
-window.plKey=function(n){
-  if(buf.length>=4)return;
-  buf+=n;dots();
-  if(buf.length<4)return;
-  var step=document.getElementById('pl-pad').getAttribute('data-step');
-  var err=document.getElementById('pl-err');
-  setTimeout(function(){
-    if(step==='set1'){
-      window._pinSet1=buf;
-      setMode('set2');
-    } else if(step==='set2'){
-      if(buf===window._pinSet1){
-        localStorage.setItem(PIN_KEY,buf);
-        dots('ok');
-        setTimeout(unlock,400);
-      } else {
-        dots('err');
-        err.textContent='兩次不一致，請重新設定';
-        setTimeout(function(){setMode('set1');},900);
-      }
-    } else {
-      // verify
-      if(buf===getPin()){
-        dots('ok');
-        setTimeout(unlock,300);
-      } else {
-        dots('err');
-        err.textContent='PIN 錯誤，請再試';
-        setTimeout(function(){setMode('verify');},700);
-      }
-    }
-  },120);
-};
-window.plDel=function(){if(buf.length>0){buf=buf.slice(0,-1);dots();}};
-window.plForgot=function(){
-  if(confirm('確定重設 PIN？重設後需設定新密碼。')){
-    localStorage.removeItem(PIN_KEY);
-    setMode('set1');
+  function showSpinner(on){
+    var s=document.getElementById('pl-spinner');
+    var b=document.getElementById('g-signin-btn');
+    if(s) s.style.display=on?'block':'none';
+    if(b) b.style.display=on?'none':'flex';
   }
-};
+  function setErr(msg){
+    var e=document.getElementById('pl-err');
+    if(e) e.textContent=msg||'';
+  }
+  function unlock(){document.getElementById('pin-lock').classList.add('off');}
+
+  window.doGoogleLogin=function(){
+    if(!_auth){setErr('Firebase 初始化失敗，請重新整理');return;}
+    setErr('');showSpinner(true);
+    var provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({login_hint:ALLOWED});
+    _auth.signInWithPopup(provider).then(function(result){
+      var email=result.user&&result.user.email;
+      if(email===ALLOWED){
+        unlock();
+      } else {
+        _auth.signOut();
+        showSpinner(false);
+        setErr('此帳號（'+email+'）無使用權限');
+      }
+    }).catch(function(err){
+      showSpinner(false);
+      if(err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request') return;
+      setErr('登入失敗：'+err.message);
+    });
+  };
+
+  if(_auth){
+    _auth.onAuthStateChanged(function(user){
+      if(user && user.email===ALLOWED){
+        unlock();
+      }
+    });
+  }
+
+  window.doSignOut=function(){
+    if(_auth) _auth.signOut().then(function(){location.reload();});
+    else location.reload();
+  };
 })();
-window.changePinFlow=function(){if(confirm('確定修改 PIN？頁面將重新載入。')){localStorage.removeItem('pa_pin');location.reload();}};
 
 renderCards();renderMsgs();
 $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();sendFree();}});
