@@ -708,15 +708,16 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 </script>
 
 
+
 <!-- ============================================================
-     想法與心法 模組 v2（取代 v1）
-     - 每筆分「內容」與「心法」兩欄；心法越短越好
-     - 可手動記錄，也可用 AI 由內容整理／重新整理成心法
-     - 內容與心法皆可刪除
-     - 清單跨載具同步（Firebase，僅同步 pa_ideas，不上傳金鑰）
+     想法與心法 模組 v3（取代 v2）
+     - 清單分兩欄：左＝內容／想法，右＝心法（各自為獨立 entry）
+     - 心法越短越好，可獨立新增、獨立刪除
+     - AI 可由內容整理出一則「獨立的心法」
+     - 面板置頂方便輸入；清單跨載具同步（僅同步 pa_ideas）
      ============================================================ -->
 <script>
-/* ---- (A) 只同步 pa_ideas 的雲端同步（與校務系統共用 lsSync 節點）---- */
+/* ---- (A) 只同步 pa_ideas 的雲端同步 ---- */
 (function(){
   var CFG={apiKey:"AIzaSyAj1xigGCfdDFr4UQ_NtEaINoH5jj6sTIA",authDomain:"ck-schadmin.firebaseapp.com",projectId:"ck-schadmin",storageBucket:"ck-schadmin.firebasestorage.app",messagingSenderId:"661490879869",appId:"1:661490879869:web:9fe0b1753b0101b9309014",databaseURL:"https://ck-schadmin-default-rtdb.firebaseio.com"};
   var LK='pa_ideas', MT='__paIdeasT';
@@ -725,17 +726,8 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function setT(t){ localStorage.setItem(MT,String(t)); }
   var applying=false, ref=null;
   window.__paIdeasApplying=function(){ return applying; };
-  window.__paIdeasPush=function(){
-    if(!ref) return;
-    var v=localStorage.getItem(LK)||'[]'; var t=Date.now(); setT(t);
-    ref.set({v:v,t:t}).catch(function(){});
-  };
-  function applyRemote(r){
-    applying=true;
-    if(r.v==null) localStorage.removeItem(LK); else localStorage.setItem(LK, r.v);
-    setT(r.t); applying=false;
-    if(window.__ideaRefresh) window.__ideaRefresh();
-  }
+  window.__paIdeasPush=function(){ if(!ref) return; var v=localStorage.getItem(LK)||'[]'; var t=Date.now(); setT(t); ref.set({v:v,t:t}).catch(function(){}); };
+  function applyRemote(r){ applying=true; if(r.v==null) localStorage.removeItem(LK); else localStorage.setItem(LK,r.v); setT(r.t); applying=false; if(window.__ideaRefresh) window.__ideaRefresh(); }
   function start(){
     if(!firebase.apps.length) firebase.initializeApp(CFG);
     ref=firebase.database().ref('lsSync/'+enc(LK));
@@ -746,11 +738,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
       ref.on('value', function(s){ var rr=s.val(); if(rr&&typeof rr.t==='number'&&rr.t>localT()) applyRemote(rr); });
     }).catch(function(){});
   }
-  function loadSdk(cb){
-    if(window.firebase&&firebase.database) return cb();
-    var urls=['https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js'];
-    var i=0;(function nx(){ if(i>=urls.length) return cb(); var s=document.createElement('script'); s.src=urls[i++]; s.onload=nx; s.onerror=nx; document.head.appendChild(s); })();
-  }
+  function loadSdk(cb){ if(window.firebase&&firebase.database) return cb(); var u=['https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js','https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js'],i=0;(function nx(){ if(i>=u.length) return cb(); var s=document.createElement('script'); s.src=u[i++]; s.onload=nx; s.onerror=nx; document.head.appendChild(s); })(); }
   loadSdk(start);
 })();
 
@@ -759,32 +747,39 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   var KEY='pa_ideas';
   var TOPICS=['會議','家長溝通','教師人事','校安','計畫文案','通用'];
   var SCN_TOPIC={ meet:'會議', parent:'家長溝通', staff:'教師人事', crisis:'校安', plan:'計畫文案' };
-  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
+  function rawLoad(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
   function save(a){ localStorage.setItem(KEY, JSON.stringify(a)); if(window.__paIdeasPush && !(window.__paIdeasApplying&&window.__paIdeasApplying())) window.__paIdeasPush(); }
   function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-
-  window.__curScn = window.__curScn || '';
-  if(typeof window.openScn==='function' && !window.openScn.__ideaWrapped){
-    var _openScn=window.openScn;
-    window.openScn=function(id){ window.__curScn=id; return _openScn.apply(this,arguments); };
-    window.openScn.__ideaWrapped=true;
+  function todayStr(){ var d=new Date(); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
+  function normalize(arr){
+    var out=[], changed=false;
+    arr.forEach(function(x){
+      if(x && x.kind){ out.push(x); return; }
+      changed=true;
+      if(x && x.content) out.push({id:x.id||uid(),kind:'content',topic:x.topic||'通用',text:x.content,date:x.date||todayStr(),ts:x.ts||Date.now()});
+      if(x && x.xinfa) out.push({id:uid(),kind:'xinfa',topic:x.topic||'通用',text:x.xinfa,date:x.date||todayStr(),ts:(x.ts||Date.now())+1});
+    });
+    return {out:out, changed:changed};
   }
+  function load(){ var n=normalize(rawLoad()); if(n.changed) save(n.out); return n.out; }
+  function add(kind,topic,text){ if(!text||!text.trim()) return false; var all=load(); all.push({id:uid(),kind:kind,topic:topic,text:text.trim(),date:todayStr(),ts:Date.now()}); save(all); return true; }
+  function del(id){ save(load().filter(function(x){return x.id!==id;})); }
+
+  window.__curScn=window.__curScn||'';
+  if(typeof window.openScn==='function' && !window.openScn.__ideaWrapped){ var _o=window.openScn; window.openScn=function(id){ window.__curScn=id; return _o.apply(this,arguments); }; window.openScn.__ideaWrapped=true; }
   function ideaContextFor(scn){
     var all=load(); if(!all.length) return '';
-    var topic=SCN_TOPIC[scn], pick;
-    if(scn==='free'||!scn){ pick=all; }
-    else if(topic){ pick=all.filter(function(x){ return x.topic===topic||x.topic==='通用'; }); }
-    else { pick=all.filter(function(x){ return x.topic==='通用'; }); }
-    if(!pick.length) return '';
-    var lines=pick.map(function(x){ var core=(x.xinfa&&x.xinfa.trim())?x.xinfa:x.content; return '・['+(x.type==='idea'?'新點子':'心法')+'／'+x.topic+'] '+core; });
+    var topic=SCN_TOPIC[scn], match=function(x){ return (scn==='free'||!scn)?true:(topic?(x.topic===topic||x.topic==='通用'):(x.topic==='通用')); };
+    var xins=all.filter(function(x){return x.kind==='xinfa'&&match(x);});
+    var cons=all.filter(function(x){return x.kind==='content'&&match(x);});
+    if(!xins.length&&!cons.length) return '';
+    var lines=[];
+    xins.forEach(function(x){ lines.push('・[心法／'+x.topic+'] '+x.text); });
+    cons.forEach(function(x){ lines.push('・[想法／'+x.topic+'] '+x.text); });
     return '【校長累積的想法與心法】\n請在建議中系統性地延續校長的思路與原則，並在適用時主動援引：\n'+lines.join('\n');
   }
-  if(typeof window.getSys==='function' && !window.getSys.__ideaWrapped){
-    var _getSys=window.getSys;
-    window.getSys=function(){ var b=_getSys.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b; };
-    window.getSys.__ideaWrapped=true;
-  }
+  if(typeof window.getSys==='function' && !window.getSys.__ideaWrapped){ var _g=window.getSys; window.getSys=function(){ var b=_g.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b; }; window.getSys.__ideaWrapped=true; }
 
   function retagCard(){
     var cards=[].slice.call(document.querySelectorAll('.card')), card=null;
@@ -796,18 +791,17 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     var d=card.querySelector('.d'); if(d)d.textContent='新點子、事後心法、經驗傳承';
   }
 
-  var modal=null, curTab='add';
+  var modal=null, curTab='list';
   var inpCss='width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit';
   var btnCss='width:100%;padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer';
   function fld(l,inner){ return '<div style="margin-bottom:12px"><div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:4px">'+l+'</div>'+inner+'</div>'; }
   function topicOptions(sel){ return TOPICS.map(function(t){ return '<option'+(t===sel?' selected':'')+'>'+t+'</option>'; }).join(''); }
-  function todayStr(){ var d=new Date(); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
 
   function buildModal(){
     modal=document.createElement('div');
-    modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:none;align-items:flex-end;justify-content:center';
+    modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center';
     var box=document.createElement('div');
-    box.style.cssText='background:#fff;width:100%;max-width:760px;max-height:92vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden';
+    box.style.cssText='background:#fff;width:100%;max-width:820px;max-height:92vh;border-radius:0 0 18px 18px;display:flex;flex-direction:column;overflow:hidden';
     box.innerHTML='<div style="background:#4f46e5;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:8px"><span style="font-size:18px;font-weight:700;flex:1">💡 想法與心法</span><button id="idClose" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;width:30px;height:30px;border-radius:50%;cursor:pointer">✕</button></div>'
       +'<div style="display:flex;border-bottom:1px solid #e5e7eb">'
       +'<button class="idTab" data-t="add" style="flex:1;padding:12px;border:none;background:none;font-size:14px;font-weight:600;cursor:pointer">📝 手動新增</button>'
@@ -823,38 +817,37 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function closeModal(){ if(modal) modal.style.display='none'; }
 
   function addHTML(){
-    return fld('類型','<select id="idType" style="'+inpCss+'"><option value="idea">💡 新點子（對教育事務的想法）</option><option value="insight">🧭 事後心法（處理事件後的原則）</option></select>')
+    return fld('類別','<select id="idKind" style="'+inpCss+'"><option value="content">💡 內容／想法（原始）</option><option value="xinfa">🧭 心法（精煉、越短越好）</option></select>')
       +fld('主題','<select id="idTopic" style="'+inpCss+'">'+topicOptions('通用')+'</select>')
-      +fld('內容（原始想法或事件經過）','<textarea id="idContent" rows="4" placeholder="例：家長情緒激動時的一次溝通經過…" style="'+inpCss+';resize:vertical"></textarea>')
-      +fld('心法（可留白，之後用 AI 整理；越短越好）','<textarea id="idXin" rows="2" placeholder="例：先同理、再處理事實、約定下一步。" style="'+inpCss+';resize:vertical"></textarea>')
+      +fld('文字','<textarea id="idText" rows="4" placeholder="內容可長；心法請盡量一句話。" style="'+inpCss+';resize:vertical"></textarea>')
       +'<button id="idSave" style="'+btnCss+'">儲存</button>';
   }
   function aiHTML(){
-    return '<div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">口述剛處理完的事件經過，AI 幫你濃縮成一句最精簡的「心法」。</div>'
+    return '<div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">口述事件經過或想法，AI 幫你濃縮成一則「獨立的心法」，直接存到清單右側。</div>'
       +fld('主題','<select id="idTopic" style="'+inpCss+'">'+topicOptions('通用')+'</select>')
-      +fld('事件經過','<textarea id="idRaw" rows="4" placeholder="例：某家長投訴導師處理衝突不公…" style="'+inpCss+';resize:vertical"></textarea>')
+      +fld('內容 / 事件經過','<textarea id="idRaw" rows="4" placeholder="例：某家長投訴導師處理衝突不公…" style="'+inpCss+';resize:vertical"></textarea>')
+      +'<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#6b7280;margin-bottom:12px"><input type="checkbox" id="idKeep" checked> 同時把原始內容也存為一則</label>'
       +'<button id="idDistill" style="'+btnCss+'">用 AI 整理成心法</button><div id="idResult" style="margin-top:14px"></div>';
   }
-  function listHTML(){
-    var all=load();
-    if(!all.length) return '<div style="text-align:center;color:#9ca3af;padding:30px 0;font-size:14px">尚無紀錄，先到「手動新增」或「AI 整理」建立第一筆吧。</div>';
-    all=all.slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
-    return all.map(function(x){
-      var badge=x.type==='idea'?'💡 新點子':'🧭 心法';
-      var hasXin=x.xinfa&&x.xinfa.trim();
-      var right=hasXin
-        ? '<div style="font-size:14px;font-weight:700;color:#3730a3;line-height:1.5;white-space:pre-wrap">'+esc(x.xinfa)+'</div>'
-          +'<div style="margin-top:8px;display:flex;gap:8px"><button class="idRe" data-id="'+x.id+'" style="font-size:11px;background:#eef2ff;color:#4338ca;border:none;border-radius:8px;padding:4px 8px;cursor:pointer">🤖 重新整理</button><button class="idDelX" data-id="'+x.id+'" style="font-size:11px;background:none;border:none;color:#ef4444;cursor:pointer">✕ 刪心法</button></div>'
-        : '<div style="font-size:12px;color:#9ca3af;margin-bottom:8px">尚無心法</div><button class="idRe" data-id="'+x.id+'" style="font-size:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:6px 10px;cursor:pointer">🤖 整理成心法</button>';
-      return '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:10px">'
-        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;font-weight:700;color:#4f46e5">'+badge+'</span><span style="font-size:11px;background:#eef2ff;color:#4338ca;padding:2px 8px;border-radius:10px">'+esc(x.topic)+'</span><span style="flex:1"></span><span style="font-size:11px;color:#9ca3af">'+esc(x.date||'')+'</span><button class="idDel" data-id="'+x.id+'" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px">🗑 刪除</button></div>'
-        +'<div style="display:flex;gap:12px;flex-wrap:wrap">'
-        +'<div style="flex:1;min-width:200px"><div style="font-size:11px;color:#9ca3af;margin-bottom:3px">內容</div><div style="font-size:14px;color:#111827;line-height:1.6;white-space:pre-wrap">'+esc(x.content||'')+'</div></div>'
-        +'<div style="flex:1;min-width:180px;background:#f5f3ff;border-left:3px solid #a5b4fc;border-radius:8px;padding:10px"><div style="font-size:11px;color:#6d28d9;font-weight:700;margin-bottom:3px">心法</div>'+right+'</div>'
-        +'</div></div>';
-    }).join('');
+  function card(x){
+    var isX=x.kind==='xinfa';
+    return '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:8px'+(isX?';background:#f5f3ff;border-left:3px solid #a5b4fc':'')+'">'
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px"><span style="font-size:10px;background:#eef2ff;color:#4338ca;padding:2px 7px;border-radius:10px">'+esc(x.topic)+'</span><span style="flex:1"></span><span style="font-size:10px;color:#9ca3af">'+esc(x.date||'')+'</span><button class="idDel" data-id="'+x.id+'" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px">🗑</button></div>'
+      +'<div style="font-size:14px;line-height:1.6;white-space:pre-wrap;'+(isX?'font-weight:700;color:#3730a3':'color:#111827')+'">'+esc(x.text)+'</div>'
+      +(isX?'':'<button class="idRe" data-id="'+x.id+'" style="margin-top:8px;font-size:11px;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:5px 9px;cursor:pointer">🤖 整理成心法 →</button>')
+      +'</div>';
   }
-  function addEntry(o){ var all=load(); all.push(o); save(all); }
+  function colHTML(title,items,empty){
+    var inner=items.length?items.map(card).join(''):'<div style="font-size:12px;color:#9ca3af;padding:14px 0;text-align:center">'+empty+'</div>';
+    return '<div style="flex:1;min-width:150px"><div style="font-size:12px;font-weight:700;color:#4f46e5;margin-bottom:8px">'+title+'</div>'+inner+'</div>';
+  }
+  function listHTML(){
+    var all=load().slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    if(!all.length) return '<div style="text-align:center;color:#9ca3af;padding:30px 0;font-size:14px">尚無紀錄，先到「手動新增」或「AI 整理」建立第一筆吧。</div>';
+    var cons=all.filter(function(x){return x.kind==='content';});
+    var xins=all.filter(function(x){return x.kind==='xinfa';});
+    return '<div style="display:flex;gap:12px;align-items:flex-start">'+colHTML('💡 內容／想法', cons, '尚無內容')+colHTML('🧭 心法', xins, '尚無心法')+'</div>';
+  }
   function paint(){
     [].slice.call(modal.querySelectorAll('.idTab')).forEach(function(b){ var on=b.getAttribute('data-t')===curTab; b.style.color=on?'#4f46e5':'#6b7280'; b.style.borderBottom=on?'2px solid #4f46e5':'2px solid transparent'; });
     var body=modal.querySelector('#idBody');
@@ -863,59 +856,36 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   }
   window.__ideaRefresh=function(){ if(modal && modal.style.display!=='none' && curTab==='list') paint(); };
 
-  function distill(content, cb, errcb){
-    var prompt='請把以下內容濃縮成一句最精簡、可立即使用的「心法」（原則與做法）。要求：繁體中文，越短越好（最多 30 字），只回傳心法本身，不要說明或標點贅字。\n內容：\n'+content;
+  function distill(text, cb, errcb){
+    var prompt='請把以下內容濃縮成一句最精簡、可立即使用的「心法」（原則與做法）。要求：繁體中文，越短越好（最多 25 字），只回傳心法本身，不要說明或標點贅字。\n內容：\n'+text;
     var p; try{ p=aiCall(prompt); }catch(e){ return errcb(e.message); }
     Promise.resolve(p).then(function(r){ var t=(r&&r.text)?r.text:String(r||''); t=t.trim(); if(!t) return errcb('AI 沒有回覆'); cb(t); }).catch(function(e){ errcb(e&&e.message||e); });
   }
-
   function bind(){
     var body=modal.querySelector('#idBody');
     var sv=body.querySelector('#idSave');
-    if(sv) sv.onclick=function(){
-      var c=body.querySelector('#idContent').value.trim();
-      if(!c){ alert('請輸入內容'); return; }
-      addEntry({ id:uid(), type:body.querySelector('#idType').value, topic:body.querySelector('#idTopic').value, content:c, xinfa:body.querySelector('#idXin').value.trim(), date:todayStr(), ts:Date.now() });
-      curTab='list'; paint();
-    };
+    if(sv) sv.onclick=function(){ if(add(body.querySelector('#idKind').value, body.querySelector('#idTopic').value, body.querySelector('#idText').value)){ curTab='list'; paint(); } else alert('請輸入文字'); };
     var dl=body.querySelector('#idDistill');
     if(dl) dl.onclick=function(){
-      var raw=body.querySelector('#idRaw').value.trim(), topic=body.querySelector('#idTopic').value, out=body.querySelector('#idResult');
-      if(!raw){ out.innerHTML='<div style="color:#ef4444;font-size:13px">請先輸入事件經過</div>'; return; }
+      var raw=body.querySelector('#idRaw').value.trim(), topic=body.querySelector('#idTopic').value, keep=body.querySelector('#idKeep').checked, out=body.querySelector('#idResult');
+      if(!raw){ out.innerHTML='<div style="color:#ef4444;font-size:13px">請先輸入內容</div>'; return; }
       out.innerHTML='<div style="color:#6b7280;font-size:13px">AI 整理中…</div>';
       distill(raw,function(t){
-        out.innerHTML=fld('AI 整理的心法（可再修改，越短越好）','<textarea id="idFinal" rows="2" style="'+inpCss+';resize:vertical">'+esc(t)+'</textarea>')+'<button id="idSaveAi" style="'+btnCss+'">儲存</button>';
-        out.querySelector('#idSaveAi').onclick=function(){ addEntry({ id:uid(), type:'insight', topic:topic, content:raw, xinfa:out.querySelector('#idFinal').value.trim(), date:todayStr(), ts:Date.now() }); curTab='list'; paint(); };
+        out.innerHTML=fld('AI 整理的心法（可再修改，越短越好）','<textarea id="idFinal" rows="2" style="'+inpCss+';resize:vertical">'+esc(t)+'</textarea>')+'<button id="idSaveAi" style="'+btnCss+'">儲存為心法</button>';
+        out.querySelector('#idSaveAi').onclick=function(){ if(keep) add('content',topic,raw); add('xinfa',topic,out.querySelector('#idFinal').value); curTab='list'; paint(); };
       },function(e){ out.innerHTML='<div style="color:#ef4444;font-size:13px">AI 整理失敗：'+esc(e)+'，可改用手動新增。</div>'; });
     };
-    [].slice.call(body.querySelectorAll('.idDel')).forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-id'); save(load().filter(function(x){return x.id!==id;})); paint(); }; });
-    [].slice.call(body.querySelectorAll('.idDelX')).forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-id'); var all=load(); all.forEach(function(x){ if(x.id===id) x.xinfa=''; }); save(all); paint(); }; });
+    [].slice.call(body.querySelectorAll('.idDel')).forEach(function(b){ b.onclick=function(){ del(b.getAttribute('data-id')); paint(); }; });
     [].slice.call(body.querySelectorAll('.idRe')).forEach(function(b){ b.onclick=function(){
-      var id=b.getAttribute('data-id'); var all=load(); var it=all.filter(function(x){return x.id===id;})[0]; if(!it) return;
+      var id=b.getAttribute('data-id'); var it=load().filter(function(x){return x.id===id;})[0]; if(!it) return;
       b.textContent='整理中…'; b.disabled=true;
-      distill(it.content||it.xinfa||'', function(t){ var a=load(); a.forEach(function(x){ if(x.id===id) x.xinfa=t; }); save(a); paint(); }, function(e){ b.textContent='失敗，重試'; b.disabled=false; alert('AI 整理失敗：'+e); });
+      distill(it.text, function(t){ add('xinfa', it.topic, t); curTab='list'; paint(); }, function(e){ b.textContent='失敗，重試'; b.disabled=false; alert('AI 整理失敗：'+e); });
     }; });
   }
 
   window.openIdeas=function(){ if(!modal) buildModal(); modal.style.display='flex'; curTab='list'; paint(); };
-
   function initCard(){ retagCard(); }
   if(document.readyState!=='loading') initCard(); else document.addEventListener('DOMContentLoaded', initCard);
   setTimeout(retagCard,800); setTimeout(retagCard,2000);
-})();
-</script>
-
-<!-- 想法與心法：版面微調 — 面板往上，方便輸入 -->
-<script>
-(function(){
-  function up(){
-    var ov=[].slice.call(document.querySelectorAll('body>div')).filter(function(d){ return d.style&&d.style.position==='fixed'&&/想法與心法/.test(d.textContent); }).pop();
-    if(!ov) return;
-    ov.style.alignItems='flex-start';
-    var box=ov.firstElementChild;
-    if(box){ box.style.borderRadius='0 0 18px 18px'; box.style.maxHeight='90vh'; }
-  }
-  var _o=window.openIdeas;
-  if(typeof _o==='function'){ window.openIdeas=function(){ _o.apply(this,arguments); setTimeout(up,0); }; }
 })();
 </script>
