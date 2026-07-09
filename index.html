@@ -927,3 +927,109 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   setTimeout(retagCard,800); setTimeout(retagCard,2000);
 })();
 </script>
+
+<!-- ============================================================
+     工具分析 模組 v1（取代「公文與簽呈」卡片）
+     - 輸入事件 → 選分析框架 → AI 用該框架拆解事件
+     - 框架：艾森豪矩陣／導航雙矩陣／冰山模型／4F反思／SMART
+     - 直接呼叫 AI 供應商（OpenAI／Gemini／Claude），中性顧問身份
+     ============================================================ -->
+<script>
+(function(){
+  var TOOLS=[
+    {id:'eisen', name:'⏱️ 艾森豪矩陣（重要 × 緊急）', sys:'你是時間管理顧問。請用「艾森豪矩陣」分析以下校園事件：把其中的待辦與議題，依「重要程度 × 緊急程度」分入四象限並條列：\n① 重要且緊急＝危機處理（立即做）\n② 重要不緊急＝規劃與成長（排時間做；核心：防火大於救火）\n③ 不重要但緊急＝干擾瑣事（授權或減少）\n④ 不重要不緊急＝浪費時間（放棄）\n最後給一句行動重點。繁體中文、條列清楚、聚焦可操作。'},
+    {id:'dual', name:'🧭 導航雙矩陣（時間＋影響力）', sys:'你是校務策略顧問。請用「導航雙矩陣」分析以下事件，分兩部分：\n(一) 艾森豪矩陣（重要 × 緊急）：四象限條列待辦。\n(二) IF 矩陣（影響力 × 可行性）：分四類——長期抗戰（影響大但難，拆成小計畫）、快速贏家（影響大又好做，優先執行）、碎片處理（影響小但好做，零碎時間做）、放下它（影響小又難，捨棄）。\n結論：先做「效果大又簡單」的事，並保留時間給重要不緊急的長遠規劃。繁體中文、條列。'},
+    {id:'iceberg', name:'🧊 冰山模型（脈絡診斷：行為-結構-信念）', sys:'你是組織溝通顧問。請用「冰山模型（脈絡診斷）」分析以下事件中的關鍵利益關係人，分三層條列：\n① 現象／行為層：對方表面的觀點、主張與抱怨（可引用其可能說法）。\n② 結構／情緒層：對方當下的感受與期待（如焦慮、疲憊；希望減少行政）。\n③ 信念／需求層：行為背後最深層的渴望（如專業被尊重、生活平衡）。\n最後：針對深層需求給 1-2 個溝通策略。繁體中文、分層條列。'},
+    {id:'f4', name:'🪜 4F 深度反思階梯', sys:'你是引導反思的教練。請用「4F 深度反思階梯」分析以下事件，分四段條列：\nFact 客觀事實：發生了哪些事？\nFeeling 情緒感受：當下心情或感受如何？\nFinding 發現與學習：從過程中發現或學到什麼？\nFuture 未來行動：再一次或未來可以如何做？\n繁體中文、四段清楚，避免只停留在「好累」與「很成功」。'},
+    {id:'smart', name:'🎯 SMART 目標對焦', sys:'你是目標管理顧問。請把以下事件或想法轉成一個「SMART 目標」，逐項條列：\nSpecific 具體：大家一看就懂、可以開始執行？\nMeasurable 衡量：達成時會看到什麼改變？\nAchievable 可達成：以目前資源做得到嗎？\nRelevant 相關：真的能回應親師生的需求嗎？\nTime-bound 時限：什麼時候慶祝第一步成功？\n最後給一個可立即執行的第一步。繁體中文、條列。'}
+  ];
+
+  function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
+  function providers(){
+    var s=settings(), list=[];
+    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-2.5-flash'});
+    if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
+    if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
+    return list;
+  }
+  function callProvider(pv, sys, user){
+    if(pv.t==='openai'){
+      return fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+pv.key},body:JSON.stringify({model:pv.model,messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.5,max_tokens:900})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error(d.error.message||'openai'); return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; });
+    }
+    if(pv.t==='gemini'){
+      return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+pv.model+':generateContent?key='+encodeURIComponent(pv.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{maxOutputTokens:900}})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error(d.error.message||'gemini'); var c=d.candidates&&d.candidates[0]; return (c&&c.content&&c.content.parts&&c.content.parts[0]&&c.content.parts[0].text)||''; });
+    }
+    if(pv.t==='claude'){
+      return fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':pv.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:pv.model,max_tokens:900,system:sys,messages:[{role:'user',content:user}]})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error(d.error.message||'claude'); return (d.content&&d.content[0]&&d.content[0].text)||''; });
+    }
+    return Promise.reject(new Error('無供應商'));
+  }
+  function analyze(sys, content, cb, errcb){
+    var pvs=providers();
+    if(!pvs.length){ return errcb('尚未設定 AI 金鑰，請到「設定」貼上金鑰'); }
+    var i=0;
+    (function tryNext(lastErr){
+      if(i>=pvs.length){ return errcb('AI 分析失敗（'+(lastErr||'')+'）'); }
+      var pv=pvs[i++];
+      callProvider(pv, sys, '事件：\n'+content).then(function(t){ t=(t||'').trim(); if(!t) return tryNext(pv.t+' 回應為空'); cb(t); }).catch(function(e){ tryNext(pv.t+'：'+(e&&e.message||e)); });
+    })('');
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function mdBold(s){ return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#+\s?(.*)$/gm,'<b>$1</b>'); }
+
+  function retagCard(){
+    var cards=[].slice.call(document.querySelectorAll('.card')), card=null;
+    for(var i=0;i<cards.length;i++){ var oc=cards[i].getAttribute('onclick')||''; var tt=cards[i].querySelector('.t'); if(oc.indexOf("openScn('doc')")>=0||(tt&&(tt.textContent.indexOf('公文')>=0||tt.textContent.indexOf('工具分析')>=0))){ card=cards[i]; break; } }
+    if(!card) return;
+    card.setAttribute('onclick','openTools()');
+    var e=card.querySelector('.emo'); if(e)e.textContent='🧰';
+    var t=card.querySelector('.t'); if(t)t.textContent='工具分析';
+    var d=card.querySelector('.d'); if(d)d.textContent='用框架拆解事件：矩陣、冰山、4F、SMART';
+  }
+
+  var modal=null;
+  var inpCss='width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit';
+  var btnCss='width:100%;padding:12px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer';
+  function fld(l,inner){ return '<div style="margin-bottom:12px"><div style="font-size:12px;color:#6b7280;font-weight:600;margin-bottom:4px">'+l+'</div>'+inner+'</div>'; }
+  function toolOptions(){ return TOOLS.map(function(t){ return '<option value="'+t.id+'">'+t.name+'</option>'; }).join(''); }
+  function buildModal(){
+    modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.55);display:none;align-items:flex-start;justify-content:center';
+    var box=document.createElement('div');
+    box.style.cssText='background:#fff;width:100%;max-width:820px;max-height:92vh;border-radius:0 0 18px 18px;display:flex;flex-direction:column;overflow:hidden';
+    box.innerHTML='<div style="background:#0f766e;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:8px"><span style="font-size:18px;font-weight:700;flex:1">🧰 工具分析</span><button id="tlClose" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;width:30px;height:30px;border-radius:50%;cursor:pointer">✕</button></div>'
+      +'<div id="tlBody" style="padding:16px;overflow-y:auto;flex:1"></div>';
+    modal.appendChild(box);
+    modal.addEventListener('click',function(e){ if(e.target===modal) closeModal(); });
+    document.body.appendChild(modal);
+    box.querySelector('#tlClose').onclick=closeModal;
+    paint();
+  }
+  function closeModal(){ if(modal) modal.style.display='none'; }
+  function paint(){
+    var body=modal.querySelector('#tlBody');
+    body.innerHTML=fld('選擇分析工具','<select id="tlTool" style="'+inpCss+'">'+toolOptions()+'</select>')
+      +fld('事件內容','<textarea id="tlContent" rows="5" placeholder="描述要分析的事件或情況，例：資深老師抱怨又要弄新計畫、增加負擔…" style="'+inpCss+';resize:vertical"></textarea>')
+      +'<button id="tlRun" style="'+btnCss+'">🔍 用 AI 分析</button><div id="tlResult" style="margin-top:14px"></div>';
+    body.querySelector('#tlRun').onclick=run;
+  }
+  function run(){
+    var body=modal.querySelector('#tlBody');
+    var toolId=body.querySelector('#tlTool').value, content=body.querySelector('#tlContent').value.trim();
+    var out=body.querySelector('#tlResult');
+    if(!content){ out.innerHTML='<div style="color:#ef4444;font-size:13px">請先輸入事件內容</div>'; return; }
+    var tool=TOOLS.filter(function(t){return t.id===toolId;})[0];
+    out.innerHTML='<div style="color:#6b7280;font-size:13px">AI 分析中…（'+esc(tool.name)+'）</div>';
+    analyze(tool.sys, content, function(t){
+      out.innerHTML='<div style="border:1px solid #99f6e4;background:#f0fdfa;border-radius:10px;padding:14px"><div style="font-size:12px;font-weight:700;color:#0f766e;margin-bottom:8px">'+esc(tool.name)+'　分析結果</div><div style="font-size:14px;line-height:1.7;color:#134e4a;white-space:pre-wrap">'+mdBold(t)+'</div></div>'
+        +'<button id="tlCopy" style="margin-top:10px;padding:8px 14px;background:#0f766e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">📋 複製結果</button>';
+      out.querySelector('#tlCopy').onclick=function(){ try{ navigator.clipboard.writeText(t); this.textContent='✓ 已複製'; }catch(e){} };
+    }, function(e){ out.innerHTML='<div style="color:#ef4444;font-size:13px">'+esc(e)+'，可稍後再試或改用其他工具。</div>'; });
+  }
+
+  window.openTools=function(){ if(!modal) buildModal(); modal.style.display='flex'; paint(); };
+  function initCard(){ retagCard(); }
+  if(document.readyState!=='loading') initCard(); else document.addEventListener('DOMContentLoaded', initCard);
+  setTimeout(retagCard,800); setTimeout(retagCard,2000);
+})();
+</script>
