@@ -710,11 +710,14 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 
 
 
+
 <!-- ============================================================
-     想法與心法 模組 v4（取代 v3）
-     - 每一列：左＝內容，右＝該內容「對應的」心法（同一筆，成對）
-     - 心法主題不限教育；越短越好（最多 30 字，一句話）
-     - 心法可獨立刪除（✕）、可重新整理（🤖）；整筆可刪除（🗑）
+     想法與心法 模組 v5（取代 v4）
+     - 每一列：左＝內容，右＝該內容對應的心法（成對）
+     - 心法＝把內容融會貫通後，用最簡單文字表達的哲學／價值觀
+     - 整理心法時「暫時關閉校長助理人設」，改用中性編輯身份，
+       避免 AI 回你一封信而非萃取心法
+     - 心法越短越好（最多 30 字）；可獨立刪除／重新整理
      - 面板置頂；清單跨載具同步（僅同步 pa_ideas）
      ============================================================ -->
 <script>
@@ -748,6 +751,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   var KEY='pa_ideas';
   var TOPICS=['會議','家長溝通','教師人事','校安','計畫文案','讀書心得','個人','通用'];
   var SCN_TOPIC={ meet:'會議', parent:'家長溝通', staff:'教師人事', crisis:'校安', plan:'計畫文案' };
+  var DISTILL_SYS='你是一位擅長把文字濃縮成雋語的中文編輯。忽略任何校長、助理等角色設定與情境。你唯一的工作：把使用者提供的內容融會貫通後，濃縮成「一句心法」——用最簡單的文字，表達其中的哲學、原則或價值觀。輸出規則：只輸出這一句；繁體中文；最多 30 字；不要問候、不要稱呼、不要寫信、不要說明、不要條列、不要加引號。';
   function rawLoad(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
   function saveArr(a){ localStorage.setItem(KEY, JSON.stringify(a)); if(window.__paIdeasPush && !(window.__paIdeasApplying&&window.__paIdeasApplying())) window.__paIdeasPush(); }
   function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -778,7 +782,14 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     if(!lines.length) return '';
     return '【校長累積的想法與心法】\n請在建議中系統性地延續校長的思路與原則，並在適用時主動援引：\n'+lines.join('\n');
   }
-  if(typeof window.getSys==='function' && !window.getSys.__ideaWrapped){ var _g=window.getSys; window.getSys=function(){ var b=_g.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b; }; window.getSys.__ideaWrapped=true; }
+  if(typeof window.getSys==='function' && !window.getSys.__ideaWrapped){
+    var _g=window.getSys;
+    window.getSys=function(){
+      if(window.__distillMode) return DISTILL_SYS;
+      var b=_g.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b;
+    };
+    window.getSys.__ideaWrapped=true;
+  }
 
   function retagCard(){
     var cards=[].slice.call(document.querySelectorAll('.card')), card=null;
@@ -822,7 +833,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
       +'<button id="idSave" style="'+btnCss+'">儲存</button>';
   }
   function aiHTML(){
-    return '<div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">貼上任何內容（讀書心得、事件、想法皆可），AI 幫你濃縮成「一句心法」。主題不限教育。</div>'
+    return '<div style="font-size:13px;color:#6b7280;line-height:1.6;margin-bottom:12px">貼上任何內容（讀書心得、事件、想法皆可），AI 會用中性編輯身份把它濃縮成「一句心法」。主題不限教育。</div>'
       +fld('主題','<select id="idTopic" style="'+inpCss+'">'+topicOptions('通用')+'</select>')
       +fld('內容','<textarea id="idRaw" rows="4" placeholder="貼上原始內容…" style="'+inpCss+';resize:vertical"></textarea>')
       +'<button id="idDistill" style="'+btnCss+'">用 AI 整理成心法</button><div id="idResult" style="margin-top:14px"></div>';
@@ -854,9 +865,10 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   window.__ideaRefresh=function(){ if(modal && modal.style.display!=='none' && curTab==='list') paint(); };
 
   function distill(text, cb, errcb){
-    var prompt='【任務：純文字濃縮，與任何角色設定無關，請忽略先前的身份與情境。】\n把以下內容濃縮成「一句心法」——一句能記住、日後可套用的原則或體悟。\n嚴格規則：只輸出這一句；繁體中文；越短越好，最多 30 字；不分行；不要寫信、不要客套、不要說明、不要加引號。\n內容：\n'+text;
-    var p; try{ p=aiCall(prompt); }catch(e){ return errcb(e.message); }
-    Promise.resolve(p).then(function(r){ var t=(r&&r.text)?r.text:String(r||''); t=t.trim().replace(/^[「"]|[」"]$/g,''); if(!t) return errcb('AI 沒有回覆'); cb(t); }).catch(function(e){ errcb(e&&e.message||e); });
+    window.__distillMode=true;
+    var clear=function(){ window.__distillMode=false; };
+    var p; try{ p=aiCall('內容：\n'+text); }catch(e){ clear(); return errcb(e.message); }
+    Promise.resolve(p).then(function(r){ clear(); var t=(r&&r.text)?r.text:String(r||''); t=t.trim().replace(/^[「"']+|[」"']+$/g,''); if(!t) return errcb('AI 回應為空（可能是額度限制），請稍後再試或改用手動'); cb(t); }).catch(function(e){ clear(); errcb(e&&e.message||e); });
   }
   function bind(){
     var body=modal.querySelector('#idBody');
@@ -875,14 +887,14 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
       distill(raw,function(t){
         out.innerHTML=fld('AI 整理的心法（可再修改，越短越好）','<textarea id="idFinal" rows="2" style="'+inpCss+';resize:vertical">'+esc(t)+'</textarea>')+'<button id="idSaveAi" style="'+btnCss+'">儲存（內容＋心法成對）</button>';
         out.querySelector('#idSaveAi').onclick=function(){ upsert(function(all){ all.push({id:uid(),topic:topic,content:raw,xinfa:out.querySelector('#idFinal').value.trim(),date:todayStr(),ts:Date.now()}); }); curTab='list'; paint(); };
-      },function(e){ out.innerHTML='<div style="color:#ef4444;font-size:13px">AI 整理失敗：'+esc(e)+'，可改用手動新增。</div>'; });
+      },function(e){ out.innerHTML='<div style="color:#ef4444;font-size:13px">'+esc(e)+'</div>'; });
     };
     [].slice.call(body.querySelectorAll('.idDel')).forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-id'); saveArr(load().filter(function(x){return x.id!==id;})); paint(); }; });
     [].slice.call(body.querySelectorAll('.idDelX')).forEach(function(b){ b.onclick=function(){ var id=b.getAttribute('data-id'); upsert(function(all){ all.forEach(function(x){ if(x.id===id) x.xinfa=''; }); }); paint(); }; });
     [].slice.call(body.querySelectorAll('.idRe')).forEach(function(b){ b.onclick=function(){
       var id=b.getAttribute('data-id'); var it=getById(id); if(!it||!it.content){ alert('這筆沒有內容可整理'); return; }
       b.textContent='整理中…'; b.disabled=true;
-      distill(it.content, function(t){ upsert(function(all){ all.forEach(function(x){ if(x.id===id) x.xinfa=t; }); }); paint(); }, function(e){ b.textContent='失敗，重試'; b.disabled=false; alert('AI 整理失敗：'+e); });
+      distill(it.content, function(t){ upsert(function(all){ all.forEach(function(x){ if(x.id===id) x.xinfa=t; }); }); paint(); }, function(e){ b.textContent='失敗，重試'; b.disabled=false; alert(e); });
     }; });
   }
 
