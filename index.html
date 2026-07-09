@@ -711,13 +711,12 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 
 
 
+
 <!-- ============================================================
-     想法與心法 模組 v5（取代 v4）
-     - 每一列：左＝內容，右＝該內容對應的心法（成對）
-     - 心法＝把內容融會貫通後，用最簡單文字表達的哲學／價值觀
-     - 整理心法時「暫時關閉校長助理人設」，改用中性編輯身份，
-       避免 AI 回你一封信而非萃取心法
-     - 心法越短越好（最多 30 字）；可獨立刪除／重新整理
+     想法與心法 模組 v6（取代 v5）
+     - 整理心法時「直接呼叫 AI 供應商」（OpenAI／Gemini／Claude），
+       用中性編輯提示，繞過校長助理人設 → 真正萃取哲學／價值觀
+     - 每一列：左＝內容，右＝對應的心法（成對）；心法≤30字
      - 面板置頂；清單跨載具同步（僅同步 pa_ideas）
      ============================================================ -->
 <script>
@@ -751,7 +750,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   var KEY='pa_ideas';
   var TOPICS=['會議','家長溝通','教師人事','校安','計畫文案','讀書心得','個人','通用'];
   var SCN_TOPIC={ meet:'會議', parent:'家長溝通', staff:'教師人事', crisis:'校安', plan:'計畫文案' };
-  var DISTILL_SYS='你是一位擅長把文字濃縮成雋語的中文編輯。忽略任何校長、助理等角色設定與情境。你唯一的工作：把使用者提供的內容融會貫通後，濃縮成「一句心法」——用最簡單的文字，表達其中的哲學、原則或價值觀。輸出規則：只輸出這一句；繁體中文；最多 30 字；不要問候、不要稱呼、不要寫信、不要說明、不要條列、不要加引號。';
+  var DISTILL_SYS='你是一位擅長把長文濃縮成雋語的中文編輯。請把使用者提供的內容融會貫通後，濃縮成「一句心法」——用最簡單的文字，表達其中的哲學、原則或價值觀。只輸出這一句：繁體中文、最多 30 字、不要問候、不要寫信、不要說明、不要條列、不要加引號。';
   function rawLoad(){ try{ return JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){ return []; } }
   function saveArr(a){ localStorage.setItem(KEY, JSON.stringify(a)); if(window.__paIdeasPush && !(window.__paIdeasApplying&&window.__paIdeasApplying())) window.__paIdeasPush(); }
   function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -784,11 +783,41 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   }
   if(typeof window.getSys==='function' && !window.getSys.__ideaWrapped){
     var _g=window.getSys;
-    window.getSys=function(){
-      if(window.__distillMode) return DISTILL_SYS;
-      var b=_g.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b;
-    };
+    window.getSys=function(){ var b=_g.apply(this,arguments)||''; var e=ideaContextFor(window.__curScn); return e?(b+'\n\n'+e):b; };
     window.getSys.__ideaWrapped=true;
+  }
+
+  /* ==== 直接呼叫 AI 供應商（繞過人設）==== */
+  function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
+  function providers(){
+    var s=settings(), list=[];
+    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-2.5-flash'});
+    if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
+    if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
+    return list;
+  }
+  function callProvider(pv, text){
+    var user='內容：\n'+text;
+    if(pv.t==='openai'){
+      return fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+pv.key},body:JSON.stringify({model:pv.model,messages:[{role:'system',content:DISTILL_SYS},{role:'user',content:user}],temperature:0.5,max_tokens:120})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error(d.error.message||'openai'); return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||''; });
+    }
+    if(pv.t==='gemini'){
+      return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+pv.model+':generateContent?key='+encodeURIComponent(pv.key),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system_instruction:{parts:[{text:DISTILL_SYS}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{maxOutputTokens:120}})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error(d.error.message||'gemini'); var c=d.candidates&&d.candidates[0]; return (c&&c.content&&c.content.parts&&c.content.parts[0]&&c.content.parts[0].text)||''; });
+    }
+    if(pv.t==='claude'){
+      return fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':pv.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:pv.model,max_tokens:120,system:DISTILL_SYS,messages:[{role:'user',content:user}]})}).then(function(r){return r.json();}).then(function(d){ if(d.error) throw new Error((d.error.message)||'claude'); return (d.content&&d.content[0]&&d.content[0].text)||''; });
+    }
+    return Promise.reject(new Error('無供應商'));
+  }
+  function distill(text, cb, errcb){
+    var pvs=providers();
+    if(!pvs.length){ return errcb('尚未設定 AI 金鑰，請到「設定」貼上金鑰'); }
+    var i=0;
+    (function tryNext(lastErr){
+      if(i>=pvs.length){ return errcb('AI 整理失敗（'+(lastErr||'')+'）'); }
+      var pv=pvs[i++];
+      callProvider(pv,text).then(function(t){ t=(t||'').trim().replace(/^[「"']+|[」"']+$/g,''); if(!t) return tryNext(pv.t+' 回應為空'); cb(t); }).catch(function(e){ tryNext(pv.t+'：'+(e&&e.message||e)); });
+    })('');
   }
 
   function retagCard(){
@@ -829,7 +858,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function addHTML(){
     return fld('主題','<select id="idTopic" style="'+inpCss+'">'+topicOptions('通用')+'</select>')
       +fld('內容（原始想法、心得或事件；可長）','<textarea id="idContent" rows="4" placeholder="例：讀《台灣漫遊錄》，想到權力不對等下的『善意』也可能是壓迫…" style="'+inpCss+';resize:vertical"></textarea>')
-      +fld('心法（可留白，之後按 🤖 整理；越短越好）','<textarea id="idXin" rows="2" placeholder="例：善意在權力不對等下，也可能成為壓迫。" style="'+inpCss+';resize:vertical"></textarea>')
+      +fld('心法（可留白，之後按 🤖 整理；越短越好）','<textarea id="idXin" rows="2" placeholder="例：善意在權力不對等中，可能隱藏著壓迫的本質。" style="'+inpCss+';resize:vertical"></textarea>')
       +'<button id="idSave" style="'+btnCss+'">儲存</button>';
   }
   function aiHTML(){
@@ -864,12 +893,6 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   }
   window.__ideaRefresh=function(){ if(modal && modal.style.display!=='none' && curTab==='list') paint(); };
 
-  function distill(text, cb, errcb){
-    window.__distillMode=true;
-    var clear=function(){ window.__distillMode=false; };
-    var p; try{ p=aiCall('內容：\n'+text); }catch(e){ clear(); return errcb(e.message); }
-    Promise.resolve(p).then(function(r){ clear(); var t=(r&&r.text)?r.text:String(r||''); t=t.trim().replace(/^[「"']+|[」"']+$/g,''); if(!t) return errcb('AI 回應為空（可能是額度限制），請稍後再試或改用手動'); cb(t); }).catch(function(e){ clear(); errcb(e&&e.message||e); });
-  }
   function bind(){
     var body=modal.querySelector('#idBody');
     var sv=body.querySelector('#idSave');
