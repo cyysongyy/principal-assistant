@@ -284,7 +284,7 @@ function renderWeekRows(){
     const ymd=getYmdOffset(i);
     const label=i===0?'今日':i===1?'明日':fmtWeekLabel(ymd);
     const ev=getEventsForDay(ymd);
-    const evHtml=ev.length?ev.map(e=>'<div class="tc-week-evt clickable" onclick="showEvtSheet(\''+e.name.replace(/\'/g,'&#39;')+'\',' '+label+')"><span class="tc-week-time">'+(e.time||'全天')+'</span><span>'+e.name+'</span></div>').join(''):'<span class="tc-week-none">無行程</span>';
+    const evHtml=ev.length?ev.map(function(e){var n=e.name.replace(/'/g,'&#39;');return '<div class="tc-week-evt clickable" onclick="showEvtSheet(\''+n+'\')"><span class="tc-week-time">'+(e.time||'全天')+'</span><span>'+e.name+'</span></div>';}).join(''):'<span class="tc-week-none">無行程</span>';
     rows+='<div class="tc-week-day"><span class="tc-week-label">'+label+'</span><div class="tc-week-evts">'+evHtml+'</div></div>';
   }
   return rows;
@@ -335,7 +335,9 @@ function renderDaySection(label,ymd){
   const items=ev.length?ev.map((e,i)=>{
     const isManual=i>=ckLen;
     const del=isManual?`<button class="tc-del" onclick="delTodayItem('${ymd}',${i-ckLen})">&#x2715;</button>`:'';
-    const clickAttr=!isManual?` onclick="showEvtSheet('${e.name.replace(/'/g,'&#39;')}','${label}')" class="tc-item clickable"`:' class="tc-item"';return `<div${clickAttr}><span class="tc-time">${e.time||'全天'}</span><span class="tc-name">${e.name}</span>${del}</div>`;
+    var eName=e.name.replace(/'/g,'&#39;');
+    var clickAttr=!isManual?' class="tc-item clickable" onclick="showEvtSheet(\'' +eName+ '\')'  :' class="tc-item"';
+    return '<div'+clickAttr+'><span class="tc-time">'+(e.time||'全天')+'</span><span class="tc-name">'+e.name+'</span>'+del+'</div>';
   }).join(''):`<div class="tc-empty">點 ＋ 新增</div>`;
   return `<div class="tc-section"><div class="tc-sec-head"><span class="tc-sec-label">${label}</span><button class="tc-add" onclick="toggleTcInp('${ymd}')">＋</button></div><div class="tc-list">${items}</div><div class="tc-inp" id="tc-inp-${ymd}"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn-${ymd}" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem('${ymd}')">新增</button><button class="tc-cancel" onclick="toggleTcInp('${ymd}',false)">取消</button></div></div></div>`;
 }
