@@ -54,21 +54,23 @@ nav button .i{display:block;font-size:20px}
 .hint a{color:var(--pri)}
 .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--g100);color:var(--g600);margin-left:6px}
 .pill.ok{background:#d1fae5;color:#065f46}
-.today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:12px}
-.today-card .tc-section{margin-bottom:8px}
-.today-card .tc-section:last-child{margin-bottom:0}
-.today-card .tc-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.today-card .tc-sec-label{font-size:.72rem;font-weight:700;color:#166534;letter-spacing:.5px;text-transform:uppercase}
-.today-card .tc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-.today-card .tc-title{display:flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:#166534}
-.today-card .tc-add{background:#16a34a;color:#fff;border:none;border-radius:99px;width:22px;height:22px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
-.today-card .tc-list{display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto}
-.today-card .tc-item{display:flex;align-items:flex-start;gap:5px;font-size:12px;line-height:1.4}
-.today-card .tc-time{color:#16a34a;font-weight:600;white-space:nowrap;min-width:38px;font-size:11px}
-.today-card .tc-name{color:#374151;flex:1}
+.today-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:8px 12px;margin-bottom:10px}
+.today-card .tc-head{display:flex;align-items:center;margin-bottom:5px}
+.today-card .tc-title{display:flex;align-items:center;gap:5px;font-weight:700;font-size:13px;color:#166534}
+.today-card .tc-cols{display:flex;gap:0}
+.today-card .tc-section{flex:1;min-width:0;padding:0 8px}
+.today-card .tc-section:first-child{padding-left:0;border-right:1px solid #bbf7d0}
+.today-card .tc-section:last-child{padding-right:0}
+.today-card .tc-sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px}
+.today-card .tc-sec-label{font-size:11px;font-weight:700;color:#166534}
+.today-card .tc-add{background:#16a34a;color:#fff;border:none;border-radius:99px;width:18px;height:18px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;flex-shrink:0}
+.today-card .tc-list{display:flex;flex-direction:column;gap:2px;max-height:80px;overflow-y:auto}
+.today-card .tc-item{display:flex;align-items:flex-start;gap:4px;font-size:12px;line-height:1.4}
+.today-card .tc-time{color:#16a34a;font-weight:600;white-space:nowrap;min-width:32px;font-size:10px}
+.today-card .tc-name{color:#374151;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .today-card .tc-del{background:none;border:none;color:#d1d5db;cursor:pointer;font-size:11px;padding:0;flex-shrink:0}
 .today-card .tc-del:hover{color:#ef4444}
-.today-card .tc-empty{font-size:12px;color:#9ca3af;padding:4px 0}
+.today-card .tc-empty{font-size:11px;color:#9ca3af;padding:2px 0}
 .tc-inp{display:none;flex-direction:column;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid #bbf7d0}
 .tc-inp.open{display:flex}
 .tc-inp input{border:1px solid #bbf7d0;border-radius:7px;padding:5px 8px;font-size:12px;outline:none;background:#fff}
@@ -285,7 +287,7 @@ function renderDaySection(label,ymd){
 }
 function renderTodayCard(){
   const todayYmd=getTodayYmd(),tomYmd=getTomYmd();
-  return `<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div>${renderDaySection('今日',todayYmd)}${renderDaySection('明日',tomYmd)}</div>`;
+  return `<div class="today-card"><div class="tc-head"><span class="tc-title">&#x1f4c5; 行程</span></div><div class="tc-cols">${renderDaySection('今日',todayYmd)}${renderDaySection('明日',tomYmd)}</div></div>`;
 }
 
 
