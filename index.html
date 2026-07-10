@@ -490,7 +490,8 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  var meetRef='';
  if(id==='meet'){
    var _mfId='1MasH6OvSiYEd2TVWk8zxaLpIQyDXL8co';
-   var _mfOpen=mfUrl||'https://drive.google.com/drive/folders/'+_mfId;
+   var _DEFAULT_MF='https://drive.google.com/drive/u/0/folders/1BUeIuZIi9I2kZ_x4doj7NpLck_q9CjAb';
+   var _mfOpen=mfUrl||_DEFAULT_MF;
    meetRef='<div style="margin-bottom:12px;background:#e0f2fe;border-radius:10px;overflow:hidden">'
      +'<div style="padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#x1f4c2;</span><a href="'+_mfOpen+'" target="_blank" style="color:#0369a1;font-weight:600;font-size:14px">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>'
      +'<div style="padding:0 12px 12px;display:flex;gap:6px">'
