@@ -118,6 +118,7 @@ nav button .i{display:block;font-size:20px}
 <main>
   <!-- 首頁 -->
   <div id="v-home" class="view active">
+    <div id="today-card-top"></div>
     <div class="notice">⚠️ AI 產出僅供草擬與參考。涉及<b>法規、人事、採購、學生安全</b>之決定，請以現行法令、主管機關函釋與校內程序為準。個資請勿輸入全名，用「某生／某師」代稱。</div>
 
     <div class="grid" id="cards"></div>
@@ -499,7 +500,7 @@ function renderRec(){
   }).join('');
 }
 
-function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('')+renderTodayCard();}
+function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('');var tc=document.getElementById('today-card-top');if(tc)tc.innerHTML=renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  if(id==='sch'){window.open('https://cyysongyy.github.io/CK-SCHADMIN/','_blank');return;}
  if(id==='tools'){openTools();return;}
