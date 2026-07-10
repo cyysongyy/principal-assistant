@@ -90,6 +90,20 @@ nav button .i{display:block;font-size:20px}
 .tc-week-evt{color:#374151;display:flex;gap:4px}
 .tc-week-time{color:#16a34a;font-weight:600;font-size:10px;min-width:28px;white-space:nowrap}
 .tc-week-none{color:#9ca3af;font-size:11px}
+/* 行程快速啟動 */
+.evt-sheet-bg{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center}
+.evt-sheet-bg.open{display:flex}
+.evt-sheet{background:#fff;border-radius:18px 18px 0 0;padding:18px 16px 32px;width:100%;max-width:720px;box-shadow:0 -4px 24px rgba(0,0,0,.15)}
+.evt-sheet-title{font-size:13px;font-weight:700;color:var(--g900);margin-bottom:4px}
+.evt-sheet-sub{font-size:11px;color:var(--g400);margin-bottom:14px}
+.evt-sheet-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.evt-sheet-btn{display:flex;align-items:center;gap:8px;padding:11px 12px;border:1px solid var(--g200);border-radius:12px;background:var(--g50);cursor:pointer;font-size:13px;font-weight:600;color:var(--g700);text-align:left}
+.evt-sheet-btn:active{background:var(--pril);border-color:var(--pri);color:var(--pri)}
+.evt-sheet-btn .es-emo{font-size:20px;flex-shrink:0}
+.evt-sheet-close{display:block;width:100%;margin-top:12px;padding:10px;border:none;border-radius:10px;background:var(--g100);color:var(--g600);font-size:14px;cursor:pointer}
+/* 行程事件可點擊 */
+.tc-item.clickable,.tc-week-evt.clickable{cursor:pointer;border-radius:6px;transition:.1s}
+.tc-item.clickable:active,.tc-week-evt.clickable:active{background:var(--pril)}
 
 /* 語音按鈕 */
 .mic-wrap{position:relative;display:flex;align-items:flex-end;gap:6px}
@@ -193,6 +207,15 @@ nav button .i{display:block;font-size:20px}
   <!-- rec -->
   <div id="v-rec" class="view"><div style="display:flex;gap:8px;padding:0 0 12px;flex-wrap:wrap;align-items:center"><select id="rec-filter" onchange="renderRec()" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">&#x5168;&#x90e8;&#x985e;&#x578b;</option><option value="doc">&#x1f4c4; &#x516c;&#x6587;&#x8207;&#x7c3d;&#x5448;</option><option value="crisis">&#x1f6a8; &#x6821;&#x5b89;&#x8207;&#x5371;&#x6a5f;</option></select><button class="btn btn2" onclick="syncRec()" style="white-space:nowrap">&#x2601;&#xfe0f; &#x540c;&#x6b65;</button><button class="btn btn2" onclick="exportRec()" style="white-space:nowrap">&#x1f4e5; &#x5319;&#x51fa;</button></div><div id="rec-sync-st" style="font-size:12px;color:var(--g400);margin-bottom:8px"></div><div id="rec-list"></div></div>
 </main>
+<!-- 行程快速啟動 action sheet -->
+<div class="evt-sheet-bg" id="evt-sheet-bg" onclick="if(event.target===this)closeEvtSheet()">
+  <div class="evt-sheet">
+    <div class="evt-sheet-title" id="es-title"></div>
+    <div class="evt-sheet-sub" id="es-sub"></div>
+    <div class="evt-sheet-btns" id="es-btns"></div>
+    <button class="evt-sheet-close" onclick="closeEvtSheet()">關閉</button>
+  </div>
+</div>
 <div class="inputbar" id="bar">
   <textarea id="inp" placeholder="繼續追問或補充…" rows="1"></textarea>
   <button id="mic-chat" class="mic-btn" onclick="startVoice('inp',this)" title="語音輸入">🎤</button>
@@ -261,7 +284,7 @@ function renderWeekRows(){
     const ymd=getYmdOffset(i);
     const label=i===0?'今日':i===1?'明日':fmtWeekLabel(ymd);
     const ev=getEventsForDay(ymd);
-    const evHtml=ev.length?ev.map(e=>'<div class="tc-week-evt"><span class="tc-week-time">'+(e.time||'全天')+'</span><span>'+e.name+'</span></div>').join(''):'<span class="tc-week-none">無行程</span>';
+    const evHtml=ev.length?ev.map(e=>'<div class="tc-week-evt clickable" onclick="showEvtSheet(\''+e.name.replace(/\'/g,'&#39;')+'\',' '+label+')"><span class="tc-week-time">'+(e.time||'全天')+'</span><span>'+e.name+'</span></div>').join(''):'<span class="tc-week-none">無行程</span>';
     rows+='<div class="tc-week-day"><span class="tc-week-label">'+label+'</span><div class="tc-week-evts">'+evHtml+'</div></div>';
   }
   return rows;
@@ -312,7 +335,7 @@ function renderDaySection(label,ymd){
   const items=ev.length?ev.map((e,i)=>{
     const isManual=i>=ckLen;
     const del=isManual?`<button class="tc-del" onclick="delTodayItem('${ymd}',${i-ckLen})">&#x2715;</button>`:'';
-    return `<div class="tc-item"><span class="tc-time">${e.time||'全天'}</span><span class="tc-name">${e.name}</span>${del}</div>`;
+    const clickAttr=!isManual?` onclick="showEvtSheet('${e.name.replace(/'/g,'&#39;')}','${label}')" class="tc-item clickable"`:' class="tc-item"';return `<div${clickAttr}><span class="tc-time">${e.time||'全天'}</span><span class="tc-name">${e.name}</span>${del}</div>`;
   }).join(''):`<div class="tc-empty">點 ＋ 新增</div>`;
   return `<div class="tc-section"><div class="tc-sec-head"><span class="tc-sec-label">${label}</span><button class="tc-add" onclick="toggleTcInp('${ymd}')">＋</button></div><div class="tc-list">${items}</div><div class="tc-inp" id="tc-inp-${ymd}"><input id="tc-ti" type="time" style="width:90px;flex-shrink:0"><input id="tc-tn-${ymd}" placeholder="活動名稱" style="flex:1"><div class="tc-btns"><button class="tc-save" onclick="addTodayItem('${ymd}')">新增</button><button class="tc-cancel" onclick="toggleTcInp('${ymd}',false)">取消</button></div></div></div>`;
 }
@@ -532,6 +555,82 @@ function renderRec(){
       +'</div></div>';
   }).join('');
 }
+
+/* ── 行程快速啟動 ── */
+(function(){
+  // 根據活動名稱推斷最相關的功能
+  var KEYWORD_MAP=[
+    {keys:['致詞','開學','畢業','典禮','頒獎','運動','親師','家長日','表揚'],id:'speech',fill:{occ:0}},
+    {keys:['會議','會報','討論','研討','說明會','座談'],id:'meet',fill:{typ:0}},
+    {keys:['家長','投訴','申訴','溝通'],id:'parent',fill:{sit:0}},
+    {keys:['校安','危機','意外','事故','霸凌','傷亡'],id:'crisis',fill:{sit:0}},
+    {keys:['公文','函','教育局','通報','陳核'],id:'doc',fill:{sub:0}},
+    {keys:['計畫','申請','新聞稿','文案','公告'],id:'plan',fill:{sub:0}},
+  ];
+  // 固定快速啟動選項（排前四）
+  var QUICK=[
+    {id:'meet',  emo:'📋', label:'會議主持稿', fill:'typ'},
+    {id:'speech',emo:'🎤', label:'致詞稿',     fill:'occ'},
+    {id:'doc',   emo:'📄', label:'公文簽呈',   fill:'sub'},
+    {id:'free',  emo:'💬', label:'自由諮詢',   fill:null},
+  ];
+
+  function detectRelevant(name){
+    for(var i=0;i<KEYWORD_MAP.length;i++){
+      var m=KEYWORD_MAP[i];
+      for(var j=0;j<m.keys.length;j++){
+        if(name.indexOf(m.keys[j])>=0) return m;
+      }
+    }
+    return null;
+  }
+
+  window.showEvtSheet=function(name, dateLabel){
+    var bg=document.getElementById('evt-sheet-bg');
+    document.getElementById('es-title').textContent=name;
+    document.getElementById('es-sub').textContent=(dateLabel||'')+'  快速啟動：';
+
+    // 決定按鈕清單：若關鍵字匹配到，把對應功能放第一位
+    var match=detectRelevant(name);
+    var btns=QUICK.slice();
+    if(match){
+      // 移除已存在的匹配項，插到最前
+      btns=btns.filter(function(b){return b.id!==match.id;});
+      var scn=SCN.find(function(s){return s.id===match.id;});
+      if(scn) btns.unshift({id:match.id,emo:scn.emo,label:scn.t+'（推薦）',fill:Object.keys(match.fill)[0]});
+    }
+
+    document.getElementById('es-btns').innerHTML=btns.slice(0,4).map(function(b){
+      return '<button class="evt-sheet-btn" onclick="launchFromEvt(\''+b.id+'\',\''+b.fill+'\',\''+name.replace(/'/g,'&#39;')+'\')">'
+        +'<span class="es-emo">'+b.emo+'</span>'
+        +'<span>'+b.label+'</span></button>';
+    }).join('');
+    bg.classList.add('open');
+  };
+
+  window.closeEvtSheet=function(){
+    document.getElementById('evt-sheet-bg').classList.remove('open');
+  };
+
+  window.launchFromEvt=function(scnId, fillKey, evtName){
+    closeEvtSheet();
+    if(scnId==='free'){
+      go('chat');
+      setTimeout(function(){
+        var inp=document.getElementById('inp');
+        if(inp){inp.value='關於「'+evtName+'」，請問你有什麼建議？';inp.focus();}
+      },100);
+      return;
+    }
+    openScn(scnId);
+    if(fillKey && fillKey!=='null'){
+      setTimeout(function(){
+        var el=document.getElementById('f-'+fillKey);
+        if(el && !el.value) el.value=evtName;
+      },80);
+    }
+  };
+})();
 
 function renderCards(){$('cards').innerHTML=SCN.map(s=>`<div class="card" onclick="openScn('${s.id}')"><div class="emo">${s.emo}</div><div class="t">${s.t}</div><div class="d">${s.d}</div></div>`).join('');var tc=document.getElementById('today-card-top');if(tc)tc.innerHTML=renderTodayCard();}
 function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
