@@ -489,8 +489,16 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
  var mfUrl=localStorage.getItem('pa_meet_folder')||'';
  var meetRef='';
  if(id==='meet'){
-   if(mfUrl){meetRef='<div style="margin-bottom:12px;padding:10px 12px;background:#e0f2fe;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#x1f4c2;</span><a href="'+mfUrl+'" target="_blank" style="color:#0369a1;font-weight:600;font-size:14px">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>';}
-   else{meetRef='<div style="margin-bottom:12px;padding:10px 12px;background:#fef9c3;border-radius:10px;font-size:13px">&#x1f4c2; &#x8cc7;&#x6599;&#x593e;&#x672a;&#x8a2d;&#x5b9a; &mdash; <button class="btn btn2" style="font-size:12px;padding:4px 10px" onclick="go(\'set\')">&#x53bb;&#x8a2d;&#x5b9a;</button></div>';}
+   var _mfId='1MasH6OvSiYEd2TVWk8zxaLpIQyDXL8co';
+   var _mfOpen=mfUrl||'https://drive.google.com/drive/folders/'+_mfId;
+   meetRef='<div style="margin-bottom:12px;background:#e0f2fe;border-radius:10px;overflow:hidden">'
+     +'<div style="padding:10px 12px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">&#x1f4c2;</span><a href="'+_mfOpen+'" target="_blank" style="color:#0369a1;font-weight:600;font-size:14px">&#x958b;&#x555f;&#x6703;&#x8b70;&#x7d00;&#x9304;&#x8cc7;&#x6599;&#x593e; &#x2197;</a></div>'
+     +'<div style="padding:0 12px 12px;display:flex;gap:6px">'
+     +'<input id="mf-search" type="text" placeholder="&#x641c;&#x5c0b;&#x8cc7;&#x6599;&#x593e;&#x5167;&#x6a94;&#x6848;..." style="flex:1;padding:8px 10px;border:1px solid #bae6fd;border-radius:8px;font-size:13px"'
+     +' onkeydown="if(event.key===\'Enter\')doMfSearch()">'
+     +'<button onclick="doMfSearch()" style="padding:8px 14px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">&#x1f50d; &#x641c;&#x5c0b;</button></div>'
+     +'<div id="mf-result" style="padding:0 12px 12px;font-size:13px"></div>'
+     +'</div>';
  }
  var crRef=id==='crisis'?'<div style="margin:0 0 12px;padding:10px 12px;background:#fff3cd;border-radius:10px;font-size:13px">&#x1f4cc; <b>&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x53c3;&#x8003;&#x4f9d;&#x64da;&#xff1a;</b><a href="https://cyysongyy.github.io/matrix-emotion/" target="_blank" style="color:#d97706">&#x958b;&#x555f;&#x60c5;&#x7dd2;&#x77e9;&#x9663;&#x5de5;&#x5177; &#x2197;</a></div>':'';
  var mpRef='';
@@ -626,10 +634,12 @@ function clearHist(){if(confirm('確定清除全部對話？此動作無法復�
     if(!_auth){setErr('Firebase 初始化失敗，請重新整理');return;}
     setErr('');showSpinner(true);
     var provider=new firebase.auth.GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/drive.readonly');
     provider.setCustomParameters({login_hint:ALLOWED});
     _auth.signInWithPopup(provider).then(function(result){
       var email=result.user&&result.user.email;
       if(email===ALLOWED){
+        window._gDriveToken=(result.credential&&result.credential.accessToken)||'';
         unlock();
       } else {
         _auth.signOut();
@@ -656,6 +666,44 @@ function clearHist(){if(confirm('確定清除全部對話？此動作無法復�
     else location.reload();
   };
 })();
+
+/* ── Drive 資料夾搜尋 ── */
+window.doMfSearch=function(){
+  var q=(document.getElementById('mf-search').value||'').trim();
+  var out=document.getElementById('mf-result');
+  if(!out)return;
+  if(!q){out.innerHTML='';return;}
+  var token=window._gDriveToken||'';
+  if(!token){
+    out.innerHTML='<span style="color:#ef4444">請先登出再重新用 Google 登入，以取得 Drive 讀取權限。</span>';
+    return;
+  }
+  out.innerHTML='<span style="color:#6b7280">搜尋中…</span>';
+  var folderId='1MasH6OvSiYEd2TVWk8zxaLpIQyDXL8co';
+  var qStr="'"+folderId+"' in parents and name contains '"+q.replace(/'/g,"\\'")+"' and trashed=false";
+  var url='https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(qStr)
+    +'&fields=files(id,name,mimeType,webViewLink,modifiedTime)&orderBy=modifiedTime+desc&pageSize=10';
+  fetch(url,{headers:{Authorization:'Bearer '+token}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){out.innerHTML='<span style="color:#ef4444">'+d.error.message+'</span>';return;}
+      var files=d.files||[];
+      if(!files.length){out.innerHTML='<span style="color:#9ca3af">找不到符合的檔案</span>';return;}
+      out.innerHTML=files.map(function(f){
+        var icon=f.mimeType==='application/vnd.google-apps.folder'?'📁'
+          :f.mimeType&&f.mimeType.indexOf('document')>=0?'📄'
+          :f.mimeType&&f.mimeType.indexOf('spreadsheet')>=0?'📊'
+          :f.mimeType&&f.mimeType.indexOf('presentation')>=0?'📑':'📎';
+        var dt=f.modifiedTime?f.modifiedTime.slice(0,10):'';
+        return '<div style="padding:6px 0;border-bottom:1px solid #bae6fd;display:flex;align-items:center;gap:6px">'
+          +'<span>'+icon+'</span>'
+          +'<a href="'+f.webViewLink+'" target="_blank" style="flex:1;color:#0369a1;font-size:13px;font-weight:500;text-decoration:none">'+f.name+'</a>'
+          +'<span style="font-size:11px;color:#9ca3af;white-space:nowrap">'+dt+'</span>'
+          +'</div>';
+      }).join('');
+    })
+    .catch(function(e){out.innerHTML='<span style="color:#ef4444">連線失敗：'+e.message+'</span>';});
+};
 
 renderCards();renderMsgs();
 $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();sendFree();}});
