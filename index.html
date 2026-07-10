@@ -77,26 +77,36 @@ nav button .i{display:block;font-size:20px}
 .tc-save{background:#16a34a;color:#fff}
 .tc-cancel{background:#f3f4f6;color:#374151}
 
-/* 今日任務板 */
-.dayboard{background:#fff;border-radius:14px;padding:14px;border:1px solid var(--g200);margin-bottom:12px}
-.dayboard-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.dayboard-title{font-size:15px;font-weight:700;color:var(--g900)}
-.dayboard-date{font-size:12px;color:var(--g400)}
-.db-section{margin-bottom:10px}
-.db-sec-label{font-size:11px;font-weight:700;color:var(--g600);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
-.db-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid var(--g100);font-size:13px}
+/* 行程橫列 */
+.cal-strip{background:#fff;border-radius:12px;border:1px solid var(--g200);margin-bottom:10px;overflow:hidden}
+.cal-strip-head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--g100);background:var(--g50)}
+.cal-strip-title{font-size:13px;font-weight:700;color:var(--g900)}
+.cal-strip-cols{display:flex}
+.cal-col{flex:1;padding:8px 10px;min-width:0}
+.cal-col+.cal-col{border-left:1px solid var(--g100)}
+.cal-col-head{font-size:11px;font-weight:700;color:var(--g600);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.cal-col-head .cal-col-dt{font-weight:400;color:var(--g400);font-size:10px}
+.cal-evt{display:flex;align-items:baseline;gap:5px;padding:3px 0;border-bottom:1px solid var(--g100);font-size:12px;line-height:1.35}
+.cal-evt:last-child{border-bottom:none}
+.cal-evt-time{color:var(--ok);font-weight:600;font-size:10px;white-space:nowrap;min-width:28px;flex-shrink:0}
+.cal-evt-name{color:var(--g700);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-empty{font-size:11px;color:var(--g400);padding:3px 0}
+/* 手動任務 */
+.task-strip{background:#fff;border-radius:12px;border:1px solid var(--g200);padding:10px 12px;margin-bottom:10px}
+.task-strip-head{font-size:13px;font-weight:700;color:var(--g900);margin-bottom:7px}
+.db-item{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid var(--g100);font-size:13px}
 .db-item:last-child{border-bottom:none}
-.db-item input[type=checkbox]{width:16px;height:16px;margin-top:1px;flex-shrink:0;accent-color:var(--pri)}
+.db-item input[type=checkbox]{width:15px;height:15px;margin-top:1px;flex-shrink:0;accent-color:var(--pri)}
 .db-item .db-text{flex:1;line-height:1.4;color:var(--g700)}
 .db-item .db-text.done{text-decoration:line-through;color:var(--g400)}
-.db-item .db-time{font-size:11px;color:var(--ok);font-weight:600;white-space:nowrap;min-width:36px}
-.db-item .db-del{background:none;border:none;color:var(--g200);cursor:pointer;font-size:13px;padding:0;flex-shrink:0}
+.db-item .db-time{font-size:10px;color:var(--ok);font-weight:600;white-space:nowrap;min-width:32px}
+.db-item .db-del{background:none;border:none;color:var(--g200);cursor:pointer;font-size:12px;padding:0;flex-shrink:0}
 .db-item .db-del:hover{color:var(--err)}
-.db-add-row{display:flex;gap:6px;margin-top:8px}
-.db-add-row input{flex:1;padding:7px 10px;border:1px solid var(--g200);border-radius:8px;font-size:13px;font-family:inherit}
-.db-add-row input[type=time]{width:88px;flex:none}
-.db-add-row button{padding:7px 14px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
-.db-empty{font-size:12px;color:var(--g400);padding:4px 0}
+.db-add-row{display:flex;gap:5px;margin-top:7px}
+.db-add-row input{flex:1;padding:6px 9px;border:1px solid var(--g200);border-radius:8px;font-size:13px;font-family:inherit}
+.db-add-row input[type=time]{width:82px;flex:none}
+.db-add-row button{padding:6px 12px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.db-empty{font-size:12px;color:var(--g400);padding:3px 0}
 /* 語音按鈕 */
 .mic-wrap{position:relative;display:flex;align-items:flex-end;gap:6px}
 .mic-wrap textarea{flex:1}
@@ -139,24 +149,32 @@ nav button .i{display:block;font-size:20px}
   <!-- 首頁 -->
   <div id="v-home" class="view active">
     <div class="notice">⚠️ AI 產出僅供草擬與參考。涉及<b>法規、人事、採購、學生安全</b>之決定，請以現行法令、主管機關函釋與校內程序為準。個資請勿輸入全名，用「某生／某師」代稱。</div>
-    <!-- 今日任務板 -->
-    <div class="dayboard">
-      <div class="dayboard-head">
-        <div class="dayboard-title">📅 今日任務板</div>
-        <div class="dayboard-date" id="db-date"></div>
+    <!-- 行程橫列 -->
+    <div class="cal-strip">
+      <div class="cal-strip-head">
+        <div class="cal-strip-title">📅 行程</div>
+        <div id="cs-head-date" style="font-size:11px;color:var(--g400)"></div>
       </div>
-      <div class="db-section" id="db-cal-section">
-        <div class="db-sec-label">行事曆</div>
-        <div id="db-cal-list"><div class="db-empty">載入中…</div></div>
-      </div>
-      <div class="db-section">
-        <div class="db-sec-label">手動任務</div>
-        <div id="db-task-list"></div>
-        <div class="db-add-row">
-          <input type="time" id="db-time" value="">
-          <input type="text" id="db-inp" placeholder="新增任務…" onkeydown="if(event.key==='Enter')dbAdd()">
-          <button onclick="dbAdd()">＋ 新增</button>
+      <div class="cal-strip-cols">
+        <div class="cal-col">
+          <div class="cal-col-head">今日<span class="cal-col-dt" id="cs-today-dt"></span></div>
+          <div id="cs-today-list"><div class="cal-empty">載入中…</div></div>
+          <button onclick="cs_addToday()" style="margin-top:5px;font-size:11px;background:none;border:1px dashed var(--g200);border-radius:6px;padding:2px 8px;color:var(--g400);cursor:pointer">＋ 新增</button>
         </div>
+        <div class="cal-col">
+          <div class="cal-col-head">明日<span class="cal-col-dt" id="cs-tmr-dt"></span></div>
+          <div id="cs-tmr-list"><div class="cal-empty">載入中…</div></div>
+        </div>
+      </div>
+    </div>
+    <!-- 手動任務 -->
+    <div class="task-strip" id="task-strip" style="display:none">
+      <div class="task-strip-head">✅ 今日手動任務</div>
+      <div id="db-task-list"></div>
+      <div class="db-add-row">
+        <input type="time" id="db-time" value="">
+        <input type="text" id="db-inp" placeholder="新增任務…" onkeydown="if(event.key='Enter')dbAdd()">
+        <button onclick="dbAdd()">＋ 新增</button>
       </div>
     </div>
     <div class="grid" id="cards"></div>
@@ -725,42 +743,70 @@ function clearHist(){if(confirm('確定清除全部對話？此動作無法復�
   };
 })();
 
-/* ── 今日任務板 ── */
+/* ── 行程橫列 + 手動任務 ── */
 (function(){
   var DB_PRE='pa_tasks_';
-  function todayKey(){return DB_PRE+new Date().toISOString().slice(0,10);}
+  var W=['日','一','二','三','四','五','六'];
+  function dateStr(d){return d.toISOString().slice(0,10);}
+  function fmtShort(d){return (d.getMonth()+1)+'/'+ d.getDate()+'（週'+W[d.getDay()]+'）';}
+  function todayKey(){return DB_PRE+dateStr(new Date());}
   function loadTasks(){try{return JSON.parse(localStorage.getItem(todayKey())||'[]');}catch(e){return[];}}
   function saveTasks(a){localStorage.setItem(todayKey(),JSON.stringify(a));}
-  function fmt(d){var w=['日','一','二','三','四','五','六'];return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（週'+w[d.getDay()]+'）';}
 
-  function renderTasks(){
-    var a=loadTasks(), el=document.getElementById('db-task-list');
-    if(!el)return;
-    if(!a.length){el.innerHTML='<div class="db-empty">尚無任務，在下方新增</div>';return;}
-    el.innerHTML=a.map(function(t,i){
-      return '<div class="db-item">'
-        +'<input type="checkbox"'+(t.done?' checked':'')+" onchange=\"dbCheck("+i+",this.checked)\">"
-        +'<span class="db-time">'+(t.time||'')+'</span>'
-        +'<span class="db-text'+(t.done?' done':'')+'">'+t.text+'</span>'
-        +"<button class=\"db-del\" onclick=\"dbDel("+i+")\">✕</button>"
-        +'</div>';
+  function evtHtml(evts, emptyMsg){
+    if(!evts.length) return '<div class="cal-empty">'+emptyMsg+'</div>';
+    return evts.map(function(e){
+      return '<div class="cal-evt"><span class="cal-evt-time">'+(e.time||'全天')+'</span><span class="cal-evt-name" title="'+e.title+'">'+e.title+'</span></div>';
     }).join('');
   }
 
   function renderCal(){
-    var el=document.getElementById('db-cal-list'); if(!el)return;
+    var td=document.getElementById('cs-today-list'), tm=document.getElementById('cs-tmr-list');
+    if(!td||!tm) return;
+    var now=new Date(), tmr=new Date(now); tmr.setDate(tmr.getDate()+1);
+    var todayS=dateStr(now), tmrS=dateStr(tmr);
+    var dt=document.getElementById('cs-today-dt'); if(dt) dt.textContent=' '+fmtShort(now);
+    var dm=document.getElementById('cs-tmr-dt');   if(dm) dm.textContent=' '+fmtShort(tmr);
     try{
       var cache=JSON.parse(localStorage.getItem('pa_gcal_cache')||'null');
-      if(!cache||!cache.events){el.innerHTML='<div class="db-empty">未設定 Google 行事曆</div>';return;}
-      var today=new Date().toISOString().slice(0,10);
-      var evts=(cache.events||[]).filter(function(e){return (e.date||'').slice(0,10)===today;});
-      if(!evts.length){el.innerHTML='<div class="db-empty">今日無行程</div>';return;}
-      el.innerHTML=evts.map(function(e){
-        return '<div class="db-item"><span class="db-time">'+(e.time||'全天')+'</span><span class="db-text">'+e.title+'</span></div>';
-      }).join('');
-    }catch(ex){el.innerHTML='<div class="db-empty">行事曆讀取錯誤</div>';}
+      if(!cache||!cache.events){
+        td.innerHTML='<div class="cal-empty">未設定行事曆</div>';
+        tm.innerHTML='<div class="cal-empty">未設定行事曆</div>';
+        return;
+      }
+      var evts=cache.events||[];
+      td.innerHTML=evtHtml(evts.filter(function(e){return (e.date||'').slice(0,10)===todayS;}),'無行程');
+      tm.innerHTML=evtHtml(evts.filter(function(e){return (e.date||'').slice(0,10)===tmrS;}),'無行程');
+    }catch(ex){
+      td.innerHTML='<div class="cal-empty">讀取錯誤</div>';
+      tm.innerHTML='<div class="cal-empty">讀取錯誤</div>';
+    }
   }
 
+  function renderTasks(){
+    var a=loadTasks(), el=document.getElementById('db-task-list'); if(!el)return;
+    var strip=document.getElementById('task-strip');
+    if(!a.length){
+      el.innerHTML='';
+      if(strip) strip.style.display='none';
+      return;
+    }
+    if(strip) strip.style.display='block';
+    el.innerHTML=a.map(function(t,i){
+      return '<div class="db-item">'
+        +'<input type="checkbox"'+(t.done?' checked':'')+' onchange="dbCheck('+i+',this.checked)">'
+        +'<span class="db-time">'+(t.time||'')+'</span>'
+        +'<span class="db-text'+(t.done?' done':'')+'">'+t.text+'</span>'
+        +'<button class="db-del" onclick="dbDel('+i+')">✕</button>'
+        +'</div>';
+    }).join('');
+  }
+
+  window.cs_addToday=function(){
+    var strip=document.getElementById('task-strip');
+    if(strip) strip.style.display='block';
+    var inp=document.getElementById('db-inp'); if(inp) inp.focus();
+  };
   window.dbAdd=function(){
     var inp=document.getElementById('db-inp'), tm=document.getElementById('db-time');
     var txt=(inp&&inp.value||'').trim(); if(!txt)return;
@@ -770,10 +816,7 @@ function clearHist(){if(confirm('確定清除全部對話？此動作無法復�
   window.dbCheck=function(i,v){var a=loadTasks();if(a[i])a[i].done=v;saveTasks(a);renderTasks();};
   window.dbDel=function(i){var a=loadTasks();a.splice(i,1);saveTasks(a);renderTasks();};
 
-  function init(){
-    var d=document.getElementById('db-date'); if(d)d.textContent=fmt(new Date());
-    renderCal(); renderTasks();
-  }
+  function init(){ renderCal(); renderTasks(); }
   if(document.readyState!=='loading') setTimeout(init,100);
   else document.addEventListener('DOMContentLoaded',function(){setTimeout(init,100);});
 })();
