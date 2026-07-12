@@ -124,6 +124,41 @@ nav button .i{display:block;font-size:20px}
 .g-signin-btn svg{width:20px;height:20px;flex-shrink:0}
 .pl-spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top-color:#818cf8;border-radius:50%;animation:spin .7s linear infinite;display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
+/* 打小人紓壓室 */
+.fab-game{position:fixed;right:14px;bottom:76px;z-index:150;width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#f59e0b,#dc2626);color:#fff;border:none;font-size:24px;box-shadow:0 4px 14px rgba(220,38,38,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.fab-game:active{transform:scale(.9)}
+.fab-game .fab-txt{position:absolute;bottom:-16px;font-size:9px;font-weight:700;color:var(--g600);background:#fff;padding:1px 6px;border-radius:99px;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap}
+.game-bg{position:fixed;inset:0;z-index:300;background:rgba(20,10,30,.72);display:none;align-items:center;justify-content:center;padding:16px}
+.game-bg.open{display:flex}
+.game-box{background:linear-gradient(180deg,#fff7ed,#fff);border-radius:20px;padding:16px;width:100%;max-width:400px;max-height:92dvh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.4);text-align:center;position:relative}
+.game-close{position:absolute;top:10px;right:10px;width:32px;height:32px;border-radius:50%;border:none;background:var(--g100);color:var(--g600);font-size:16px;cursor:pointer}
+.game-title{font-size:17px;font-weight:800;color:#991b1b;margin:4px 0 2px}
+.game-sub{font-size:11.5px;color:var(--g600);line-height:1.5;margin-bottom:10px}
+.game-label-inp{width:80%;max-width:220px;padding:7px 10px;border:1px solid #fecaca;border-radius:99px;background:#fff;font-size:13px;text-align:center;margin-bottom:8px}
+.game-stage{position:relative;width:100%;height:230px;background:radial-gradient(ellipse at 50% 20%,#fee2e2,#fef3c7 70%);border-radius:16px;overflow:hidden;margin-bottom:10px;touch-action:manipulation;user-select:none}
+.doll-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);cursor:pointer;-webkit-tap-highlight-color:transparent;animation:dollIdle 1.6s ease-in-out infinite}
+@keyframes dollIdle{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-5px)}}
+.doll{width:96px;height:130px;background:linear-gradient(180deg,#fef9c3,#fde68a);border-radius:16px 16px 40px 40px;border:2px solid #d97706;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.15);transition:transform .08s}
+.doll:before{content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:#fde68a;border:2px solid #d97706}
+.doll .face{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;z-index:2}
+.doll.hit{animation:dollHit .28s}
+.combo{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:15px;font-weight:900;color:#dc2626;opacity:0;pointer-events:none;z-index:4}
+.combo.show{animation:comboPop .5s ease-out}
+@keyframes comboPop{0%{opacity:0;transform:translateX(-50%) scale(.6)}30%{opacity:1;transform:translateX(-50%) scale(1.25)}100%{opacity:0;transform:translateX(-50%) scale(1)}}
+.confetti{position:absolute;font-size:18px;pointer-events:none;z-index:5;animation:confettiFall 1s ease-in forwards}
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(90px) rotate(200deg)}}
+@keyframes dollHit{0%{transform:rotate(0)}20%{transform:rotate(-9deg) translateX(-4px)}50%{transform:rotate(7deg) translateX(3px)}75%{transform:rotate(-4deg)}100%{transform:rotate(0)}}
+.stage-shake{animation:stageShake .28s}
+@keyframes stageShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.pow{position:absolute;font-weight:900;font-size:20px;color:#dc2626;text-shadow:0 1px 0 #fff;pointer-events:none;animation:powFloat .6s ease-out forwards;z-index:3}
+@keyframes powFloat{0%{opacity:0;transform:translate(-50%,-50%) scale(.5) rotate(-8deg)}20%{opacity:1;transform:translate(-50%,-70%) scale(1.15) rotate(4deg)}100%{opacity:0;transform:translate(-50%,-130%) scale(1) rotate(0)}}
+.game-stats{display:flex;justify-content:center;gap:18px;margin-bottom:8px}
+.game-stat{font-size:12px;color:var(--g600)}.game-stat b{display:block;font-size:20px;color:#dc2626}
+.game-msg{min-height:20px;font-size:13px;font-weight:700;color:#b45309;margin-bottom:10px}
+.game-btns{display:flex;gap:8px}
+.game-btns button{flex:1;padding:10px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+.game-reset{background:var(--g100);color:var(--g600)}
+.game-done{background:#10b981;color:#fff}
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -235,6 +270,30 @@ nav button .i{display:block;font-size:20px}
     <button class="btn" id="deploy-btn" onclick="doDeploy()">確認部署</button>
     <div id="deploy-st" class="hint" style="margin-top:8px"></div>
     <button class="evt-sheet-close" onclick="closeDeploy()">關閉</button>
+  </div>
+</div>
+<!-- 打小人紓壓室 -->
+<button class="fab-game" onclick="openGame()" title="打小人紓壓一下">👊<span class="fab-txt">紓壓</span></button>
+<div class="game-bg" id="game-bg" onclick="if(event.target===this)closeGame()">
+  <div class="game-box">
+    <button class="game-close" onclick="closeGame()">✕</button>
+    <div class="game-title">打小人紓壓室</div>
+    <div class="game-sub">點小人就對了！打越快，反應越誇張 😤</div>
+    <div class="game-stage" id="game-stage" onpointerdown="hitDoll(event)">
+      <div class="doll-wrap" id="doll-wrap">
+        <div class="doll" id="doll"><span class="face" id="doll-face">😐</span></div>
+      </div>
+      <div class="combo" id="combo"></div>
+    </div>
+    <div class="game-stats">
+      <div class="game-stat"><b id="game-count">0</b>這次打數</div>
+      <div class="game-stat"><b id="game-total">0</b>累積打數</div>
+    </div>
+    <div class="game-msg" id="game-msg"></div>
+    <div class="game-btns">
+      <button class="game-reset" onclick="resetGame()">🔄 重來</button>
+      <button class="game-done" onclick="closeGame()">🌤️ 打完了，收工</button>
+    </div>
   </div>
 </div>
 <div class="inputbar" id="bar">
@@ -1180,6 +1239,93 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 
   window.openTools=function(){if(!modal)buildModal();modal.style.display='flex';paint();};
   if(document.readyState!=='loading') setTimeout(function(){},0);
+})();
+</script>
+
+<script>
+/* ───────── 打小人紓壓室 ───────── */
+(function(){
+  var count=0;
+  var faces=['😐','😠','😤','😖','😵','🥴','😌'];
+  var msgs=[
+    '啪！小人退散～',
+    '再一下，氣消一半了',
+    '好，繼續打，不用客氣',
+    '小人已經在求饒了',
+    '打得不錯，深呼吸一下',
+    '氣差不多順了吧？',
+    '打累了也沒關係，休息一下'
+  ];
+  var acEl;
+  function ac(){ if(!acEl){ try{ acEl=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return acEl; }
+  function smack(){
+    var ctx=ac(); if(!ctx) return;
+    var t=ctx.currentTime;
+    var osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.type='square'; osc.frequency.setValueAtTime(180,t); osc.frequency.exponentialRampToValueAtTime(60,t+.09);
+    gain.gain.setValueAtTime(.25,t); gain.gain.exponentialRampToValueAtTime(.001,t+.12);
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(t); osc.stop(t+.13);
+  }
+  function totalKey(){return 'pa_game_total';}
+  function getTotal(){ return parseInt(localStorage.getItem(totalKey())||'0',10)||0; }
+  function setTotal(n){ localStorage.setItem(totalKey(),String(n)); }
+  var lastHit=0, streak=0;
+  var CONFETTI=['🎉','✨','⭐','💥','🎊'];
+  function burstConfetti(stage){
+    for(var i=0;i<10;i++){
+      (function(){
+        var c=document.createElement('div');
+        c.className='confetti'; c.textContent=CONFETTI[Math.floor(Math.random()*CONFETTI.length)];
+        c.style.left=(10+Math.random()*80)+'%'; c.style.top=(20+Math.random()*30)+'%';
+        c.style.animationDelay=(Math.random()*.15)+'s';
+        stage.appendChild(c); setTimeout(function(){c.remove();},1100);
+      })();
+    }
+  }
+  window.hitDoll=function(e){
+    e.preventDefault();
+    count++;
+    var total=getTotal()+1; setTotal(total);
+    document.getElementById('game-count').textContent=count;
+    document.getElementById('game-total').textContent=total;
+    var now=Date.now();
+    streak=(now-lastHit<450)?streak+1:1; lastHit=now;
+    var doll=document.getElementById('doll'), stage=document.getElementById('game-stage'), face=document.getElementById('doll-face');
+    doll.classList.remove('hit'); void doll.offsetWidth; doll.classList.add('hit');
+    stage.classList.remove('stage-shake'); void stage.offsetWidth; stage.classList.add('stage-shake');
+    face.textContent=faces[Math.min(count-1,faces.length-1)];
+    var rect=stage.getBoundingClientRect();
+    var x=(e.clientX!=null?e.clientX-rect.left:rect.width/2), y=(e.clientY!=null?e.clientY-rect.top:rect.height/2);
+    var pow=document.createElement('div');
+    pow.className='pow'; pow.textContent=(['啪!','咚!','砰!','嘿!'])[count%4];
+    pow.style.left=x+'px'; pow.style.top=y+'px';
+    stage.appendChild(pow); setTimeout(function(){pow.remove();},650);
+    if(streak>=3){
+      var combo=document.getElementById('combo');
+      combo.textContent='COMBO x'+streak;
+      combo.classList.remove('show'); void combo.offsetWidth; combo.classList.add('show');
+    }
+    smack();
+    if(navigator.vibrate) navigator.vibrate(streak>=5?[15,20,15]:25);
+    var msgEl=document.getElementById('game-msg');
+    var idx=Math.min(Math.floor(count/6),msgs.length-1);
+    msgEl.textContent=msgs[idx];
+    if(count%10===0) burstConfetti(stage);
+  };
+  window.resetGame=function(){
+    count=0; streak=0; lastHit=0;
+    document.getElementById('game-count').textContent='0';
+    document.getElementById('game-msg').textContent='';
+    document.getElementById('doll-face').textContent='😐';
+  };
+  window.openGame=function(){
+    document.getElementById('game-total').textContent=getTotal();
+    document.getElementById('game-bg').classList.add('open');
+  };
+  window.closeGame=function(){
+    document.getElementById('game-bg').classList.remove('open');
+    resetGame();
+  };
 })();
 </script>
 
