@@ -317,7 +317,7 @@ nav button .i{display:block;font-size:20px}
       <div class="game-stage" id="game-stage" onpointerdown="hitDoll(event)">
         <div class="doll-wrap" id="doll-wrap">
           <div class="doll" id="doll">
-          <span class="face" id="doll-face">😐</span>
+          <span class="face" id="doll-face">😏</span>
           <span class="bandaid" id="doll-bandaid">🩹</span>
           <span class="dizzy" id="doll-dizzy">💫</span>
           <div class="bruises" id="doll-bruises"></div>
@@ -1302,7 +1302,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 /* ───────── 打小人紓壓室 ───────── */
 (function(){
   var count=0;
-  var faces=['😐','😠','😤','😖','😵','🥴','😌'];
+  var faces=['😏','😣','😖','🥺','😭'];
   var msgs=[
     '啪！小人退散～',
     '再一下，氣消一半了',
@@ -1350,8 +1350,8 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     var doll=document.getElementById('doll'), stage=document.getElementById('game-stage'), face=document.getElementById('doll-face');
     doll.classList.remove('hit'); void doll.offsetWidth; doll.classList.add('hit');
     stage.classList.remove('stage-shake'); void stage.offsetWidth; stage.classList.add('stage-shake');
-    face.textContent=faces[Math.min(count-1,faces.length-1)];
     var lvl=Math.min(Math.floor(count/5),DMG_COLORS.length-1);
+    face.textContent=faces[lvl];
     doll.style.setProperty('--dmgcolor',DMG_COLORS[lvl]);
     document.getElementById('doll-bandaid').classList.toggle('show',lvl>=2);
     document.getElementById('doll-dizzy').classList.toggle('show',lvl>=4);
@@ -1388,7 +1388,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     count=0; streak=0; lastHit=0;
     document.getElementById('game-count').textContent='0';
     document.getElementById('game-msg').textContent='';
-    document.getElementById('doll-face').textContent='😐';
+    document.getElementById('doll-face').textContent='😏';
     document.getElementById('doll').style.setProperty('--dmgcolor',DMG_COLORS[0]);
     document.getElementById('doll-bandaid').classList.remove('show');
     document.getElementById('doll-dizzy').classList.remove('show');
