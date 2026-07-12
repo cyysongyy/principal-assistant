@@ -138,10 +138,17 @@ nav button .i{display:block;font-size:20px}
 .game-stage{position:relative;width:100%;height:230px;background:radial-gradient(ellipse at 50% 20%,#fee2e2,#fef3c7 70%);border-radius:16px;overflow:hidden;margin-bottom:10px;touch-action:manipulation;user-select:none}
 .doll-wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);cursor:pointer;-webkit-tap-highlight-color:transparent;animation:dollIdle 1.6s ease-in-out infinite}
 @keyframes dollIdle{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-5px)}}
-.doll{width:96px;height:130px;background:linear-gradient(180deg,#fef9c3,#fde68a);border-radius:16px 16px 40px 40px;border:2px solid #d97706;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.15);transition:transform .08s}
-.doll:before{content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:#fde68a;border:2px solid #d97706}
+.doll{--dmgcolor:#fde68a;width:96px;height:130px;background:linear-gradient(180deg,#fef9c3,var(--dmgcolor));border-radius:16px 16px 40px 40px;border:2px solid #d97706;position:relative;box-shadow:0 6px 16px rgba(0,0,0,.15);transition:transform .08s,background .4s}
+.doll:before{content:'';position:absolute;top:14px;left:50%;transform:translateX(-50%);width:44px;height:44px;border-radius:50%;background:var(--dmgcolor);border:2px solid #d97706;transition:background .4s}
 .doll .face{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;z-index:2}
 .doll.hit{animation:dollHit .28s}
+.doll .bruises{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;z-index:1}
+.bruise-dot{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(109,40,217,.6),rgba(109,40,217,0) 72%)}
+.doll .bandaid{position:absolute;top:32px;left:63%;font-size:15px;transform:rotate(20deg);z-index:3;display:none}
+.doll .bandaid.show{display:block}
+.doll .dizzy{position:absolute;top:2px;left:50%;font-size:18px;z-index:4;display:none;animation:dizzySpin 1.1s linear infinite}
+.doll .dizzy.show{display:block}
+@keyframes dizzySpin{from{transform:translateX(-50%) rotate(0deg) translateX(20px) rotate(0deg)}to{transform:translateX(-50%) rotate(360deg) translateX(20px) rotate(-360deg)}}
 .combo{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:15px;font-weight:900;color:#dc2626;opacity:0;pointer-events:none;z-index:4}
 .combo.show{animation:comboPop .5s ease-out}
 @keyframes comboPop{0%{opacity:0;transform:translateX(-50%) scale(.6)}30%{opacity:1;transform:translateX(-50%) scale(1.25)}100%{opacity:0;transform:translateX(-50%) scale(1)}}
@@ -159,6 +166,21 @@ nav button .i{display:block;font-size:20px}
 .game-btns button{flex:1;padding:10px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer}
 .game-reset{background:var(--g100);color:var(--g600)}
 .game-done{background:#10b981;color:#fff}
+/* 紓壓選單 */
+.relief-menu{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.relief-card{background:#fff;border:1px solid #fde68a;border-radius:16px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.relief-card:active{background:#fff7ed;transform:scale(.97)}
+.relief-card .rc-emo{font-size:30px}
+.relief-card .rc-t{font-size:14px;font-weight:800;color:#7c2d12}
+.relief-card .rc-d{font-size:11px;color:var(--g600)}
+/* 方塊呼吸法 */
+.breath-stage{display:flex;flex-direction:column;align-items:center;justify-content:center;height:230px;margin-bottom:10px}
+.breath-box{width:90px;height:90px;border-radius:20px;background:linear-gradient(145deg,#60a5fa,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;font-weight:800;box-shadow:0 8px 24px rgba(59,130,246,.35);transition:transform 4s ease-in-out;transform:scale(1)}
+.breath-box.grow{transform:scale(1.5)}
+.breath-box.hold{transform:scale(1.5);transition:transform .3s}
+.breath-box.shrink{transform:scale(1);transition:transform 4s ease-in-out}
+.breath-box.rest{transform:scale(1);transition:transform .3s}
+.breath-phase{margin-top:16px;font-size:15px;font-weight:700;color:#1e40af}
 </style>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -273,27 +295,61 @@ nav button .i{display:block;font-size:20px}
   </div>
 </div>
 <!-- 打小人紓壓室 -->
-<button class="fab-game" onclick="openGame()" title="打小人紓壓一下">👊<span class="fab-txt">紓壓</span></button>
+<button class="fab-game" onclick="openGame()" title="紓壓一下">👊<span class="fab-txt">紓壓</span></button>
 <div class="game-bg" id="game-bg" onclick="if(event.target===this)closeGame()">
   <div class="game-box">
     <button class="game-close" onclick="closeGame()">✕</button>
-    <div class="game-title">打小人紓壓室</div>
-    <div class="game-sub">點小人就對了！打越快，反應越誇張 😤</div>
-    <div class="game-stage" id="game-stage" onpointerdown="hitDoll(event)">
-      <div class="doll-wrap" id="doll-wrap">
-        <div class="doll" id="doll"><span class="face" id="doll-face">😐</span></div>
+
+    <!-- 選單 -->
+    <div id="relief-hub">
+      <div class="game-title">紓壓一下</div>
+      <div class="game-sub">選一個，花一分鐘放鬆</div>
+      <div class="relief-menu">
+        <button class="relief-card" onclick="openPunch()"><span class="rc-emo">👊</span><span class="rc-t">打小人</span><span class="rc-d">發洩情緒</span></button>
+        <button class="relief-card" onclick="openBreath()"><span class="rc-emo">🌬️</span><span class="rc-t">方塊呼吸</span><span class="rc-d">4-4-4-4 平靜</span></button>
       </div>
-      <div class="combo" id="combo"></div>
     </div>
-    <div class="game-stats">
-      <div class="game-stat"><b id="game-count">0</b>這次打數</div>
-      <div class="game-stat"><b id="game-total">0</b>累積打數</div>
+
+    <!-- 打小人 -->
+    <div id="relief-punch" style="display:none">
+      <div class="game-title">打小人紓壓室</div>
+      <div class="game-sub">點小人就對了！打越快，反應越誇張 😤</div>
+      <div class="game-stage" id="game-stage" onpointerdown="hitDoll(event)">
+        <div class="doll-wrap" id="doll-wrap">
+          <div class="doll" id="doll">
+          <span class="face" id="doll-face">😐</span>
+          <span class="bandaid" id="doll-bandaid">🩹</span>
+          <span class="dizzy" id="doll-dizzy">💫</span>
+          <div class="bruises" id="doll-bruises"></div>
+        </div>
+        </div>
+        <div class="combo" id="combo"></div>
+      </div>
+      <div class="game-stats">
+        <div class="game-stat"><b id="game-count">0</b>這次打數</div>
+        <div class="game-stat"><b id="game-total">0</b>累積打數</div>
+      </div>
+      <div class="game-msg" id="game-msg"></div>
+      <div class="game-btns">
+        <button class="game-reset" onclick="backHub()">⬅ 換一個</button>
+        <button class="game-done" onclick="closeGame()">🌤️ 打完了，收工</button>
+      </div>
     </div>
-    <div class="game-msg" id="game-msg"></div>
-    <div class="game-btns">
-      <button class="game-reset" onclick="resetGame()">🔄 重來</button>
-      <button class="game-done" onclick="closeGame()">🌤️ 打完了，收工</button>
+
+    <!-- 方塊呼吸法 -->
+    <div id="relief-breath" style="display:none">
+      <div class="game-title">方塊呼吸法</div>
+      <div class="game-sub">吸氣・屏息・吐氣・屏息，各 4 秒</div>
+      <div class="breath-stage">
+        <div class="breath-box" id="breath-box"><span id="breath-count">4</span></div>
+        <div class="breath-phase" id="breath-phase">按開始，跟著方塊呼吸</div>
+      </div>
+      <div class="game-btns">
+        <button class="game-reset" onclick="backHub()">⬅ 換一個</button>
+        <button class="game-done" id="breath-toggle" onclick="toggleBreath()">▶️ 開始</button>
+      </div>
     </div>
+
   </div>
 </div>
 <div class="inputbar" id="bar">
@@ -1282,6 +1338,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
       })();
     }
   }
+  var DMG_COLORS=['#fde68a','#fbbf24','#f97316','#c026d3','#6d28d9'];
   window.hitDoll=function(e){
     e.preventDefault();
     count++;
@@ -1294,6 +1351,21 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     doll.classList.remove('hit'); void doll.offsetWidth; doll.classList.add('hit');
     stage.classList.remove('stage-shake'); void stage.offsetWidth; stage.classList.add('stage-shake');
     face.textContent=faces[Math.min(count-1,faces.length-1)];
+    var lvl=Math.min(Math.floor(count/5),DMG_COLORS.length-1);
+    doll.style.setProperty('--dmgcolor',DMG_COLORS[lvl]);
+    document.getElementById('doll-bandaid').classList.toggle('show',lvl>=2);
+    document.getElementById('doll-dizzy').classList.toggle('show',lvl>=4);
+    var bruises=document.getElementById('doll-bruises');
+    if(bruises.children.length<10 && Math.random()<0.6){
+      var dot=document.createElement('div');
+      dot.className='bruise-dot';
+      var sz=10+Math.random()*14;
+      dot.style.width=sz+'px'; dot.style.height=sz+'px';
+      dot.style.left=(8+Math.random()*76)+'%';
+      dot.style.top=(20+Math.random()*66)+'%';
+      dot.style.opacity=Math.min(.3+lvl*.15,.85);
+      bruises.appendChild(dot);
+    }
     var rect=stage.getBoundingClientRect();
     var x=(e.clientX!=null?e.clientX-rect.left:rect.width/2), y=(e.clientY!=null?e.clientY-rect.top:rect.height/2);
     var pow=document.createElement('div');
@@ -1317,15 +1389,76 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     document.getElementById('game-count').textContent='0';
     document.getElementById('game-msg').textContent='';
     document.getElementById('doll-face').textContent='😐';
+    document.getElementById('doll').style.setProperty('--dmgcolor',DMG_COLORS[0]);
+    document.getElementById('doll-bandaid').classList.remove('show');
+    document.getElementById('doll-dizzy').classList.remove('show');
+    document.getElementById('doll-bruises').innerHTML='';
   };
+  function showPanel(id){
+    ['relief-hub','relief-punch','relief-breath'].forEach(function(p){
+      document.getElementById(p).style.display=(p===id)?'':'none';
+    });
+  }
   window.openGame=function(){
     document.getElementById('game-total').textContent=getTotal();
+    showPanel('relief-hub');
     document.getElementById('game-bg').classList.add('open');
+  };
+  window.openPunch=function(){ showPanel('relief-punch'); };
+  window.openBreath=function(){ showPanel('relief-breath'); };
+  window.backHub=function(){
+    resetGame(); stopBreath();
+    showPanel('relief-hub');
   };
   window.closeGame=function(){
     document.getElementById('game-bg').classList.remove('open');
-    resetGame();
+    resetGame(); stopBreath();
+    showPanel('relief-hub');
   };
+  /* 方塊呼吸法 4-4-4-4 */
+  var breathTimer=null, breathPhaseIdx=0, breathTick=0;
+  var BREATH_PHASES=[
+    {label:'吸氣…',cls:'grow'},
+    {label:'屏息',cls:'hold'},
+    {label:'吐氣…',cls:'shrink'},
+    {label:'屏息',cls:'rest'}
+  ];
+  function breathStep(){
+    var box=document.getElementById('breath-box'), phaseEl=document.getElementById('breath-phase'), cnt=document.getElementById('breath-count');
+    var ph=BREATH_PHASES[breathPhaseIdx];
+    box.className='breath-box '+ph.cls;
+    phaseEl.textContent=ph.label;
+    breathTick=4; cnt.textContent=breathTick;
+    clearInterval(breathTimer);
+    breathTimer=setInterval(function(){
+      breathTick--;
+      if(breathTick<=0){
+        breathPhaseIdx=(breathPhaseIdx+1)%4;
+        breathStep();
+      } else {
+        cnt.textContent=breathTick;
+      }
+    },1000);
+  }
+  window.toggleBreath=function(){
+    var btn=document.getElementById('breath-toggle');
+    if(breathTimer){
+      stopBreath();
+      btn.textContent='▶️ 開始';
+    } else {
+      breathPhaseIdx=0;
+      breathStep();
+      btn.textContent='⏸️ 停止';
+    }
+  };
+  function stopBreath(){
+    clearInterval(breathTimer); breathTimer=null;
+    var box=document.getElementById('breath-box'), phaseEl=document.getElementById('breath-phase'), cnt=document.getElementById('breath-count'), btn=document.getElementById('breath-toggle');
+    if(box){ box.className='breath-box'; }
+    if(phaseEl){ phaseEl.textContent='按開始，跟著方塊呼吸'; }
+    if(cnt){ cnt.textContent='4'; }
+    if(btn){ btn.textContent='▶️ 開始'; }
+  }
 })();
 </script>
 
