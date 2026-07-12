@@ -198,6 +198,13 @@ nav button .i{display:block;font-size:20px}
       <button class="btn" onclick="saveLineSet()" style="margin-top:10px">儲存 LINE 設定</button>
       <div id="line-set-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
     </div>
+    <div class="set"><h3>🚀 GitHub 直接部署（Abot）</h3>
+      <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">貼上 GitHub Personal Access Token，讓「App／系統開發」情境產出的完整程式碼可以在對話裡按一下直接部署到 cyysongyy 帳號的 GitHub Pages。<br>Token 只存在此瀏覽器，直接從瀏覽器呼叫 GitHub API，不會經過任何第三方伺服器——跟你貼的 AI 金鑰是同樣的信任模型。建議在 GitHub 產生 token 時將權限限縮為只有你要用的幾個 repo，並定期更換。</p>
+      <label>GitHub Personal Access Token</label>
+      <input type="text" id="gh-token" placeholder="ghp_..." style="font-size:12px">
+      <button class="btn" onclick="saveGhToken()" style="margin-top:10px">儲存</button>
+      <div id="gh-token-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
+    </div>
     <div class="set"><h3>🔐 帳號</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">目前以 Google 帳號登入保護，僅 cyysongyy@gmail.com 可使用。</p><button class="btn btn2" onclick="doSignOut()">登出</button></div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
@@ -205,7 +212,7 @@ nav button .i{display:block;font-size:20px}
     </div>
   </div>
   <!-- rec -->
-  <div id="v-rec" class="view"><div style="display:flex;gap:8px;padding:0 0 12px;flex-wrap:wrap;align-items:center"><select id="rec-filter" onchange="renderRec()" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">&#x5168;&#x90e8;&#x985e;&#x578b;</option><option value="doc">&#x1f4c4; &#x516c;&#x6587;&#x8207;&#x7c3d;&#x5448;</option><option value="crisis">&#x1f6a8; &#x6821;&#x5b89;&#x8207;&#x5371;&#x6a5f;</option></select><button class="btn btn2" onclick="syncRec()" style="white-space:nowrap">&#x2601;&#xfe0f; &#x540c;&#x6b65;</button><button class="btn btn2" onclick="exportRec()" style="white-space:nowrap">&#x1f4e5; &#x5319;&#x51fa;</button></div><div id="rec-sync-st" style="font-size:12px;color:var(--g400);margin-bottom:8px"></div><div id="rec-list"></div></div>
+  <div id="v-rec" class="view"><div style="display:flex;gap:8px;padding:0 0 8px;flex-wrap:wrap;align-items:center"><select id="rec-filter" onchange="renderRec()" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">全部類型</option><option value="speech">🎤 致詞稿</option><option value="parent">👨‍👩‍👧 家長溝通</option><option value="meet">📋 會議</option><option value="staff">🧑‍🏫 教師與人事</option><option value="crisis">🚨 校安與危機</option><option value="plan">🏫 計畫與文案</option><option value="doc">📄 公文與簽呈</option><option value="abot">🤖 App／系統開發</option><option value="free">💬 自由諮詢</option></select><button class="btn btn2" onclick="syncRec()" style="white-space:nowrap">☁️ 同步</button><button class="btn btn2" onclick="exportRec()" style="white-space:nowrap">📥 匯出</button></div><input type="text" id="rec-tagsearch" oninput="renderRec()" placeholder="🏷️ 搜尋標籤或關鍵字…" style="width:100%;padding:8px 10px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px;margin-bottom:8px"><div id="rec-sync-st" style="font-size:12px;color:var(--g400);margin-bottom:8px"></div><div id="rec-list"></div></div>
 </main>
 <!-- 行程快速啟動 action sheet -->
 <div class="evt-sheet-bg" id="evt-sheet-bg" onclick="if(event.target===this)closeEvtSheet()">
@@ -214,6 +221,20 @@ nav button .i{display:block;font-size:20px}
     <div class="evt-sheet-sub" id="es-sub"></div>
     <div class="evt-sheet-btns" id="es-btns"></div>
     <button class="evt-sheet-close" onclick="closeEvtSheet()">關閉</button>
+  </div>
+</div>
+<!-- Abot 部署 action sheet -->
+<div class="evt-sheet-bg" id="deploy-sheet-bg" onclick="if(event.target===this)closeDeploy()">
+  <div class="evt-sheet">
+    <div class="evt-sheet-title">🚀 部署到 GitHub Pages</div>
+    <div class="evt-sheet-sub" id="deploy-sub"></div>
+    <label>Repo 名稱（新的會自動建立）</label>
+    <input type="text" id="deploy-repo" placeholder="例：new-tool-name" style="margin-bottom:8px">
+    <label>檔案路徑</label>
+    <input type="text" id="deploy-path" value="index.html" style="margin-bottom:8px">
+    <button class="btn" id="deploy-btn" onclick="doDeploy()">確認部署</button>
+    <div id="deploy-st" class="hint" style="margin-top:8px"></div>
+    <button class="evt-sheet-close" onclick="closeDeploy()">關閉</button>
   </div>
 </div>
 <div class="inputbar" id="bar">
@@ -257,6 +278,19 @@ const SCN=[
    ['typ','sel','類型',['簽（陳核）','函稿','校內公告','回覆教育局處來文']],['sub','text','事由（一句話）'],
    ['pts','ta','要點與背景（越具體越好）'],['tone','sel','語氣',['正式','正式但精簡','稍軟性（對家長）']]],
    p:(v)=>`請以台灣學校行政公文慣例，幫我草擬「${v.typ}」。事由：${v.sub}。要點與背景：${v.pts}。語氣：${v.tone}。要求：符合公文程式用語（主旨/說明/擬辦視類型），條列清楚；最後提醒我需自行確認的法規或程序（若有）。`},
+ {id:'abot',emo:'🤖',t:'App／系統開發',d:'做新工具、修東西、串接資料（Abot）',f:[
+   ['need','sel','需求類型',['新做一個工具','修改/修正現有功能','串接不同系統的資料','不確定，幫我想']],
+   ['sit','ta','描述你要的東西（給誰用、要解決什麼問題）'],
+   ['ref','text','要修改的話，貼現有網址（例：https://cyysongyy.github.io/xxx/）']],
+   p:(v)=>`我是 Abot，Young 的 App 開發助理。需求類型：${v.need}。描述：${v.sit}。${v.ref?('要修改的現有工具：'+v.ref+'。'):''}
+請依 Young 的既有慣例回覆：
+1) 預設用「單一 HTML 檔」（CSS/JS 都寫在同一檔案內），不用額外後端，除非明顯需要跨裝置同步資料
+2) 有紀錄／歷史資料的功能一律用 IndexedDB（不是 localStorage 單一 key）
+3) 介面全部繁體中文，手機優先版面
+4) 若牽涉手機動作感測器（陀螺儀/加速度計），提醒 iOS 需要按鈕觸發權限請求，且重新整理會失效
+5) 若是 PWA，提醒 iOS Safari 快取問題與應對方式（版本化快取名稱、強制重開頁面）
+6) 先給簡短建置規劃，再給「完整可直接部署」的 HTML 原始碼，整包放在單一個 \`\`\`html 區塊裡（不要分段），這樣才能直接按「🚀 部署」送出
+Young 目前的 GitHub 生態（cyysongyy 帳號）：gait（步態平衡）、5-steps-rehab-for-footdrop（復健）、remediation-system（改考卷）、CK-SCHADMIN（校務系統）、micro-politics（人事事件）、principal-assistant（這個 App 本身）——如果新工具跟這些有關，說明如何跟現有系統串接（例如透過同網域 localStorage 共享資料）。`},
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
 /* ───────── 狀態與儲存 ───────── */
@@ -507,13 +541,35 @@ ${recent}
   }catch(e){console.warn('mpContext:',e);return'';}
 }
 const RK='pa_rec_v2';
+const TYPE_META={
+ speech:{icon:'🎤',label:'致詞稿'},parent:{icon:'👨‍👩‍👧',label:'家長溝通'},meet:{icon:'📋',label:'會議'},
+ staff:{icon:'🧑‍🏫',label:'教師與人事'},crisis:{icon:'🚨',label:'校安與危機'},plan:{icon:'🏫',label:'計畫與文案'},
+ doc:{icon:'📄',label:'公文與簽呈'},abot:{icon:'🤖',label:'App／系統開發'},free:{icon:'💬',label:'自由諮詢'}};
+function typeMeta(t){return TYPE_META[t]||{icon:'📝',label:t||'其他'};}
 function loadRecs(){try{return JSON.parse(localStorage.getItem(RK)||'[]');}catch(e){return[];}}
 function saveRecs(a){localStorage.setItem(RK,JSON.stringify(a));}
-function saveRecord(type,title,formData,out){
-  const r={id:'r'+Date.now(),ts:Date.now(),type,title:(title||'').slice(0,80)||type,preview:(out||'').slice(0,200),full:out||'',formData:formData||{}};
+function saveRecord(type,title,formData,out,tag){
+  const r={id:'r'+Date.now(),ts:Date.now(),type,title:(title||'').slice(0,80)||type,preview:(out||'').slice(0,200),full:out||'',formData:formData||{},tag:(tag||'').trim()};
   const a=loadRecs();a.unshift(r);if(a.length>200)a.length=200;saveRecs(a);
   if(_fbRD)_fbRD.collection('pa_records').doc(r.id).set({...r,device:navigator.userAgent.slice(0,60)}).catch(e=>console.warn(e));
   const st=$('rec-sync-st');if(st)st.textContent='✓ 已儲存：'+r.title;
+}
+/* ── 相關記錄：同標籤優先，找不到就用標題關鍵字比對 ── */
+function relatedContext(tag,text){
+  try{
+    const all=loadRecs();if(!all.length)return'';
+    const needle=(tag||'').trim();
+    let matches=[];
+    if(needle)matches=all.filter(r=>r.tag&&r.tag.trim()===needle);
+    if(!matches.length&&text){
+      const words=(text||'').replace(/[\s，。、！？：；「」『』()（）]/g,' ').split(' ').filter(w=>w.length>=2).slice(0,10);
+      if(words.length)matches=all.filter(r=>words.some(w=>(r.title||'').includes(w)));
+    }
+    matches=matches.slice(0,5);
+    if(!matches.length)return'';
+    const body=matches.map(r=>`- [${new Date(r.ts).toLocaleDateString('zh-TW')}][${typeMeta(r.type).label}] ${r.title}：${(r.preview||'').slice(0,120)}`).join('\n');
+    return`【相關歷史記錄（同標籤或關鍵字相關，僅供參考，非最新事實）】\n${body}`;
+  }catch(e){return'';}
 }
 async function syncRec(){
   const st=$('rec-sync-st');if(!_fbRD){if(st)st.textContent='⚠️未連線';return;}
@@ -528,7 +584,7 @@ async function syncRec(){
 }
 function exportRec(){
   const a=loadRecs();if(!a.length){alert('目前沒有紀錄');return;}
-  const txt=a.map(r=>'=== '+new Date(r.ts).toLocaleString('zh-TW')+' | '+(r.type==='doc'?'公文與簽呈':'校安與危機')+' | '+r.title+' ===\n'+r.full+'\n').join('\n');
+  const txt=a.map(r=>'=== '+new Date(r.ts).toLocaleString('zh-TW')+' | '+typeMeta(r.type).label+(r.tag?'｜🏷️'+r.tag:'')+' | '+r.title+' ===\n'+r.full+'\n').join('\n');
   const b=new Blob([txt],{type:'text/plain;charset=utf-8'});const a2=document.createElement('a');a2.href=URL.createObjectURL(b);a2.download='校長紀錄_'+new Date().toISOString().slice(0,10)+'.txt';a2.click();
 }
 function delRec(id){
@@ -538,22 +594,30 @@ function delRec(id){
   renderRec();
 }
 function toggleRecFull(id){const e=document.getElementById('rec-full-'+id);if(e)e.style.display=e.style.display==='none'?'block':'none';}
+function jumpTag(tag){const el=$('rec-tagsearch');if(el){el.value=tag;renderRec();window.scrollTo(0,0);}}
 function renderRec(){
   const flt=$('rec-filter')?$('rec-filter').value:'';
-  let a=loadRecs();if(flt)a=a.filter(r=>r.type===flt);
+  const q=($('rec-tagsearch')?$('rec-tagsearch').value:'').trim().toLowerCase();
+  const allRecs=loadRecs();
+  let a=allRecs;if(flt)a=a.filter(r=>r.type===flt);
+  if(q)a=a.filter(r=>(r.tag||'').toLowerCase().includes(q)||(r.title||'').toLowerCase().includes(q));
   const L=$('rec-list');if(!L)return;
-  if(!a.length){L.innerHTML='<div style="text-align:center;color:var(--g400);padding:40px">目前沒有紀錄<br><small>使用公文與簽呈或校安與危機功能後自動儲存</small></div>';return;}
+  if(!a.length){L.innerHTML='<div style="text-align:center;color:var(--g400);padding:40px">目前沒有紀錄<br><small>使用各項功能產生內容後會自動儲存</small></div>';return;}
   const eh=t=>(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
   L.innerHTML=a.map(r=>{
     const d=new Date(r.ts).toLocaleString('zh-TW',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-    const lb=r.type==='doc'?'📄':'🚨';
+    const meta=typeMeta(r.type);
+    const related=r.tag?allRecs.filter(x=>x.id!==r.id&&x.tag&&x.tag===r.tag):[];
+    const tagPill=r.tag?'<span class="pill ok" style="cursor:pointer" onclick="jumpTag(\''+eh(r.tag).replace(/'/g,"\\'")+'\')">🏷️ '+eh(r.tag)+'</span>':'';
+    const relatedHtml=related.length?'<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--g200);font-size:11.5px;color:var(--g600)">🔗 相關記錄（同標籤）：'+related.slice(0,5).map(x=>typeMeta(x.type).icon+' '+eh(x.title)).join('、')+'</div>':'';
     return '<div style="background:var(--g50);border:1px solid var(--g200);border-radius:12px;padding:14px;margin-bottom:10px">'
-      +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+lb+' '+eh(r.title)+'</b><span style="font-size:11px;color:var(--g400);white-space:nowrap">'+d+'</span></div>'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>'+meta.icon+' '+eh(r.title)+'</b>'+tagPill+'<span style="font-size:11px;color:var(--g400);white-space:nowrap;margin-left:auto">'+d+'</span></div>'
       +'<div style="font-size:12px;color:var(--g600);margin-top:6px;line-height:1.5">'+eh(r.preview)+(r.full.length>200?'…':'')+'</div>'
       +'<div id="rec-full-'+r.id+'" style="display:none;margin-top:8px;font-size:13px;white-space:pre-wrap;line-height:1.7;border-top:1px solid var(--g200);padding-top:8px">'+eh(r.full)+'</div>'
+      +relatedHtml
       +'<div style="display:flex;gap:8px;margin-top:8px">'
-      +'<button class="btn btn2" style="flex:1;font-size:12px" onclick="toggleRecFull(\''+r.id+'\')">&#x5c55;&#x958b;&#x5168;&#x6587;</button>'
-      +'<button class="btn btn2" style="font-size:12px;color:#ef4444" onclick="delRec(\''+r.id+'\')">&#x522a;&#x9664;</button>'
+      +'<button class="btn btn2" style="flex:1;font-size:12px" onclick="toggleRecFull(\''+r.id+'\')">展開全文</button>'
+      +'<button class="btn btn2" style="font-size:12px;color:#ef4444" onclick="delRec(\''+r.id+'\')">刪除</button>'
       +'</div></div>';
   }).join('');
 }
@@ -670,13 +734,17 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
   if(ty==='sel')return`<label>${lab}</label><select id="f-${k}">${opt.map(o=>`<option>${o}</option>`).join('')}</select>`;
   if(ty==='ta')return`<label>${lab}</label><div class="mic-wrap"><textarea id="f-${k}"></textarea><button class="mic-btn" onclick="startVoice('f-${k}',this)" title="語音輸入">🎤</button></div>`;
   return`<label>${lab}</label><input type="text" id="f-${k}">`;
- }).join('')+`<button class="btn" onclick="submitScn('${id}')">✨ 產生</button><button class="btn btn2" onclick="go('home')">返回</button>`;
+ }).join('')+`<label>🏷️ 案件／主題標籤（選填，讓相關記錄能互相串連）</label><input type="text" id="f-caseTag" placeholder="例：五甲班-W老師、114校慶活動">`
+ +`<button class="btn" onclick="submitScn('${id}')">✨ 產生</button><button class="btn btn2" onclick="go('home')">返回</button>`;
  go('form');}
 async function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=false;
  s.f.forEach(f=>{const el=$('f-'+f[0]);v[f[0]]=(el.value||'').trim();if(f[1]!=='ta'&&!v[f[0]])miss=true;});
+ const tagEl=$('f-caseTag');v.caseTag=tagEl?tagEl.value.trim():'';
  if(miss){alert('必填欄位還沒填喔');return;}
- if(id==='doc'||id==='crisis'){window._pendingRec={type:id,title:v.sub||v.sit||v.typ||s.t,formData:v};}
+ window._pendingRec={type:id,title:v.sub||v.sit||v.typ||v.occ||s.t,formData:v,tag:v.caseTag};
  let prompt=s.p(v);
+ const rc=relatedContext(v.caseTag,prompt);
+ if(rc)prompt+='\n\n'+rc;
  if(id==='staff'){const cb=$('mp-use');
    if(cb&&cb.checked){const c=await mpContext();if(c)prompt+='\n\n'+c;
      else if(!_mpUser)alert('提示：尚未登入 Micro-politics（Google 帳戶），本次將不附事件資料。');}}
@@ -685,16 +753,25 @@ async function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=
 function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
 function renderMsgs(){$('msgs').innerHTML=hist.map((m,i)=>{
  if(m.role==='user')return`<div class="msg u">${esc(m.content)}</div>`;
- return`<div class="msg a">${esc(m.content)}<div class="tools"><button onclick="copyMsg(${i})">📋 複製</button><button onclick="pushToLine(hist[${i}].content,this)">📲 傳到 LINE</button></div></div>`;
+ const hasCode=/```/.test(m.content);
+ return`<div class="msg a">${esc(m.content)}<div class="tools"><button onclick="copyMsg(${i})">📋 複製</button><button onclick="pushToLine(hist[${i}].content,this)">📲 傳到 LINE</button><button onclick="saveFromChat(${i})">💾 存紀錄</button>${hasCode?`<button onclick="openDeploy(${i})">🚀 部署</button>`:''}</div></div>`;
 }).join('');scrollBottom();}
+function saveFromChat(i){
+  const m=hist[i];if(!m||m.role!=='assistant')return;
+  const title=prompt('這筆記錄的標題／主題：','自由諮詢');
+  if(title==null)return;
+  const tag=prompt('案件／主題標籤（選填，方便日後串連相關記錄）：','')||'';
+  saveRecord('free',title,{},m.content,tag);
+  alert('已存入紀錄');
+}
 function copyMsg(i){navigator.clipboard.writeText(hist[i].content).then(()=>alert('已複製'));}
 function scrollBottom(){setTimeout(()=>{document.querySelector('main').scrollTop=999999;},50);}
-function sendFree(){const t=$('inp').value.trim();if(!t)return;$('inp').value='';send(t);}
+function sendFree(){const t=$('inp').value.trim();if(!t)return;$('inp').value='';const rc=relatedContext(null,t);send(rc?t+'\n\n'+rc:t);}
 async function send(text){
  if(!S.gkey&&!S.okey){go('set');alert('請先在設定貼入至少一把 API Key（Gemini／Claude／OpenAI 擇一，Gemini 免費）');return;}
  hist.push({role:'user',content:text});saveHist();go('chat');renderMsgs();
  const tip=document.createElement('div');tip.className='typing';tip.textContent='思考中…';$('msgs').appendChild(tip);scrollBottom();
- try{const out=await aiCall();hist.push({role:'assistant',content:out});if(window._pendingRec){saveRecord(window._pendingRec.type,window._pendingRec.title,window._pendingRec.formData,out);window._pendingRec=null;}}
+ try{const out=await aiCall();hist.push({role:'assistant',content:out});if(window._pendingRec){saveRecord(window._pendingRec.type,window._pendingRec.title,window._pendingRec.formData,out,window._pendingRec.tag);window._pendingRec=null;}}
  catch(e){hist.push({role:'assistant',content:'❌ 呼叫失敗：'+e.message+'\n請到「設定」檢查 API Key 與模型名，或稍後再試。'});}
  saveHist();renderMsgs();}
 /* ───────── 校務系統資料橋接（同網域 localStorage） ───────── */
@@ -758,7 +835,7 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');}
-function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();}
+function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();const ghst=$('gh-token-st');if(ghst)ghst.textContent=loadGhToken()?'✓ 已設定 Token':'尚未設定';}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 /* ───────── init ───────── */
 
@@ -877,6 +954,72 @@ function loadLineSet(){
   var u=localStorage.getItem(LINE_URL_KEY)||'',id=localStorage.getItem(LINE_UID_KEY)||'';
   var eu=document.getElementById('line-push-url'),ei=document.getElementById('line-user-id');
   if(eu)eu.value=u; if(ei)ei.value=id;
+}
+
+/* ───────── Abot：GitHub 直接部署 ─────────
+   同一套信任模型跟 AI API 金鑰一樣：token 只存在這個瀏覽器的 localStorage，
+   直接從瀏覽器打 GitHub API，不經過任何中介伺服器。 */
+const GH_KEY='pa_gh_token';
+const GH_OWNER='cyysongyy';
+function loadGhToken(){return localStorage.getItem(GH_KEY)||'';}
+function saveGhToken(){
+  const v=$('gh-token').value.trim();
+  if(v)localStorage.setItem(GH_KEY,v);
+  $('gh-token').value='';
+  const st=$('gh-token-st');if(st)st.textContent=loadGhToken()?'✓ 已儲存':'';
+}
+function extractCode(text){
+  const m=text.match(/```(?:html|HTML)?\n([\s\S]*?)```/);
+  return m?m[1]:null;
+}
+let _deployCode='';
+function openDeploy(i){
+  const code=extractCode(hist[i].content);
+  if(!code){alert('這則回覆裡沒有偵測到完整的程式碼區塊（```html ... ```），無法直接部署。');return;}
+  if(!loadGhToken()){alert('請先到「設定」貼上 GitHub Token 才能部署');go('set');return;}
+  _deployCode=code;
+  $('deploy-sub').textContent='將以約 '+code.length+' 字元的內容建立／更新指定 repo 的檔案';
+  $('deploy-repo').value='';$('deploy-path').value='index.html';$('deploy-st').textContent='';
+  document.getElementById('deploy-sheet-bg').classList.add('open');
+}
+function closeDeploy(){document.getElementById('deploy-sheet-bg').classList.remove('open');}
+function b64u(str){return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,(m,p)=>String.fromCharCode('0x'+p)));}
+async function ghFetch(path,opts){
+  const token=loadGhToken();
+  const headers=Object.assign({'Authorization':'token '+token,'Accept':'application/vnd.github+json'},(opts&&opts.headers)||{});
+  return fetch('https://api.github.com'+path,Object.assign({},opts,{headers}));
+}
+async function doDeploy(){
+  const repo=$('deploy-repo').value.trim();const path=$('deploy-path').value.trim()||'index.html';
+  if(!repo){alert('請輸入 repo 名稱');return;}
+  const btn=$('deploy-btn');btn.disabled=true;$('deploy-st').textContent='檢查 repo 中…';
+  try{
+    let r=await ghFetch('/repos/'+GH_OWNER+'/'+repo);
+    if(r.status===404){
+      $('deploy-st').textContent='建立新 repo…';
+      const cr=await ghFetch('/user/repos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:repo,auto_init:true})});
+      if(!cr.ok){const j=await cr.json().catch(()=>({}));throw new Error('建立 repo 失敗：'+(j.message||cr.status));}
+      await new Promise(res=>setTimeout(res,1500));
+    }else if(!r.ok){
+      throw new Error('檢查 repo 失敗（狀態碼 '+r.status+'），請確認 Token 權限與 repo 名稱');
+    }
+    let sha=null;
+    const gf=await ghFetch('/repos/'+GH_OWNER+'/'+repo+'/contents/'+encodeURIComponent(path));
+    if(gf.status===200){const gj=await gf.json();sha=gj.sha;}
+    $('deploy-st').textContent='推送檔案中…';
+    const payload={message:'Abot 部署（principal-assistant）',content:b64u(_deployCode)};
+    if(sha)payload.sha=sha;
+    const pr=await ghFetch('/repos/'+GH_OWNER+'/'+repo+'/contents/'+encodeURIComponent(path),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!pr.ok){const j=await pr.json().catch(()=>({}));throw new Error('推送失敗：'+(j.message||pr.status));}
+    $('deploy-st').textContent='啟用 GitHub Pages…';
+    await ghFetch('/repos/'+GH_OWNER+'/'+repo+'/pages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:{branch:'main',path:'/'}})}).catch(()=>{});
+    const url='https://'+GH_OWNER+'.github.io/'+repo+'/';
+    $('deploy-st').innerHTML='✅ 部署完成！<br><a href="'+url+'" target="_blank" style="color:var(--pri);font-weight:700">'+url+' ↗</a><br><span style="color:var(--g400)">首次啟用 Pages 可能要等 1-2 分鐘才會生效</span>';
+  }catch(e){
+    $('deploy-st').textContent='❌ '+e.message;
+  }finally{
+    btn.disabled=false;
+  }
 }
 
 /* ── Drive 資料夾搜尋 ── */
