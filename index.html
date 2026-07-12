@@ -1325,7 +1325,26 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function totalKey(){return 'pa_game_total';}
   function getTotal(){ return parseInt(localStorage.getItem(totalKey())||'0',10)||0; }
   function setTotal(n){ localStorage.setItem(totalKey(),String(n)); }
-  var lastHit=0, streak=0;
+  var lastHit=0, streak=0, lastSpokenLvl=-1;
+  var LINES=[
+    '哼，你以為這樣就會痛嗎？',
+    '痛痛痛！你很大力耶！',
+    '啊！手下留情一下嘛！',
+    '饒了我吧！',
+    '嗚嗚嗚…我真的錯了，拜託別打了…'
+  ];
+  function speakLine(lvl){
+    if(!('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      var u=new SpeechSynthesisUtterance(LINES[lvl]);
+      u.lang='zh-TW';
+      u.rate=lvl>=4?0.85:(lvl>=3?0.95:1.05);
+      u.pitch=lvl<=0?0.85:Math.min(1.1+lvl*0.25,2);
+      u.volume=1;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
   var CONFETTI=['🎉','✨','⭐','💥','🎊'];
   function burstConfetti(stage){
     for(var i=0;i<10;i++){
@@ -1353,6 +1372,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     var lvl=Math.min(Math.floor(count/5),DMG_COLORS.length-1);
     face.textContent=faces[lvl];
     doll.style.setProperty('--dmgcolor',DMG_COLORS[lvl]);
+    if(lvl>lastSpokenLvl){ lastSpokenLvl=lvl; speakLine(lvl); }
     document.getElementById('doll-bandaid').classList.toggle('show',lvl>=2);
     document.getElementById('doll-dizzy').classList.toggle('show',lvl>=4);
     var bruises=document.getElementById('doll-bruises');
@@ -1385,7 +1405,8 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     if(count%10===0) burstConfetti(stage);
   };
   window.resetGame=function(){
-    count=0; streak=0; lastHit=0;
+    count=0; streak=0; lastHit=0; lastSpokenLvl=-1;
+    if('speechSynthesis' in window) window.speechSynthesis.cancel();
     document.getElementById('game-count').textContent='0';
     document.getElementById('game-msg').textContent='';
     document.getElementById('doll-face').textContent='😏';
