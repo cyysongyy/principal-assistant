@@ -1369,7 +1369,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     var doll=document.getElementById('doll'), stage=document.getElementById('game-stage'), face=document.getElementById('doll-face');
     doll.classList.remove('hit'); void doll.offsetWidth; doll.classList.add('hit');
     stage.classList.remove('stage-shake'); void stage.offsetWidth; stage.classList.add('stage-shake');
-    var lvl=Math.min(Math.floor(count/5),DMG_COLORS.length-1);
+    var lvl=Math.min(Math.floor(count/5)+1,DMG_COLORS.length-1);
     face.textContent=faces[lvl];
     doll.style.setProperty('--dmgcolor',DMG_COLORS[lvl]);
     if(lvl>lastSpokenLvl){ lastSpokenLvl=lvl; speakLine(lvl); }
