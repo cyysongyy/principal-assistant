@@ -734,7 +734,7 @@ function openScn(id){const s=SCN.find(x=>x.id===id);if(!s)return;
   if(ty==='sel')return`<label>${lab}</label><select id="f-${k}">${opt.map(o=>`<option>${o}</option>`).join('')}</select>`;
   if(ty==='ta')return`<label>${lab}</label><div class="mic-wrap"><textarea id="f-${k}"></textarea><button class="mic-btn" onclick="startVoice('f-${k}',this)" title="語音輸入">🎤</button></div>`;
   return`<label>${lab}</label><input type="text" id="f-${k}">`;
- }).join('')+`<label>🏷️ 案件／主題標籤（選填，讓相關記錄能互相串連）</label><input type="text" id="f-caseTag" placeholder="例：五甲班-W老師、114校慶活動">`
+ }).join('')+`<label>🏷️ 案件／主題標籤（選填，讓相關記錄能互相串連）</label><input type="text" id="f-caseTag" placeholder="例：114校慶活動、A班個案追蹤">`
  +`<button class="btn" onclick="submitScn('${id}')">✨ 產生</button><button class="btn btn2" onclick="go('home')">返回</button>`;
  go('form');}
 async function submitScn(id){const s=SCN.find(x=>x.id===id);const v={};let miss=false;
