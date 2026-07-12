@@ -125,7 +125,8 @@ nav button .i{display:block;font-size:20px}
 .pl-spinner{width:28px;height:28px;border:3px solid rgba(255,255,255,.2);border-top-color:#818cf8;border-radius:50%;animation:spin .7s linear infinite;display:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 /* 打小人紓壓室 */
-.fab-game{position:fixed;right:14px;bottom:76px;z-index:150;width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#f59e0b,#dc2626);color:#fff;border:none;font-size:24px;box-shadow:0 4px 14px rgba(220,38,38,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.fab-game{position:fixed;right:14px;bottom:76px;z-index:150;width:56px;height:56px;border-radius:50%;background:linear-gradient(145deg,#f59e0b,#dc2626);color:#fff;border:none;font-size:24px;box-shadow:0 4px 14px rgba(220,38,38,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,bottom .2s}
+.fab-game.raised{bottom:132px}
 .fab-game:active{transform:scale(.9)}
 .fab-game .fab-txt{position:absolute;bottom:-16px;font-size:9px;font-weight:700;color:var(--g600);background:#fff;padding:1px 6px;border-radius:99px;box-shadow:0 1px 4px rgba(0,0,0,.15);white-space:nowrap}
 .game-bg{position:fixed;inset:0;z-index:300;background:rgba(20,10,30,.72);display:none;align-items:center;justify-content:center;padding:16px}
@@ -295,7 +296,7 @@ nav button .i{display:block;font-size:20px}
   </div>
 </div>
 <!-- 打小人紓壓室 -->
-<button class="fab-game" onclick="openGame()" title="紓壓一下">👊<span class="fab-txt">紓壓</span></button>
+<button class="fab-game" id="fab-game" onclick="openGame()" title="紓壓一下">👊<span class="fab-txt">紓壓</span></button>
 <div class="game-bg" id="game-bg" onclick="if(event.target===this)closeGame()">
   <div class="game-box">
     <button class="game-close" onclick="closeGame()">✕</button>
@@ -422,7 +423,8 @@ const SYS=`你是台灣中小學校長的資深幕僚長（主任祕書等級）
 const $=id=>document.getElementById(id);
 function go(v){['home','form','chat','set','rec'].forEach(x=>{const el=$('v-'+x);if(el)el.classList.toggle('active',x===v);});
  ['home','chat','set','rec'].forEach(x=>{const n=$('n-'+x);if(n)n.classList.toggle('on',x===v);});
- $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();if(v==='rec')renderRec();}
+ $('bar').classList.toggle('show',v==='chat');if(v==='chat')scrollBottom();if(v==='set')loadSet();if(v==='rec')renderRec();
+ const fg=$('fab-game');if(fg)fg.classList.toggle('raised',v==='chat');}
 function getTodayYmd(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function getTomYmd(){const t=new Date();t.setDate(t.getDate()+1);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
 function getYmdOffset(n){const t=new Date();t.setDate(t.getDate()+n);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');}
