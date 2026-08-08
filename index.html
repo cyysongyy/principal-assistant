@@ -298,6 +298,17 @@ nav button .i{display:block;font-size:20px}
       <button class="btn" onclick="saveGhToken()" style="margin-top:10px">儲存</button>
       <div id="gh-token-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
     </div>
+    <div class="set"><h3>☁️ 後端同步</h3>
+      <p style="font-size:12px;color:var(--g600);margin-bottom:10px;line-height:1.6">
+        將 API 金鑰、功課表、調課記錄、行政減課設定同步到 Firebase 雲端，換裝置後一鍵還原。<br>
+        <span style="color:#f59e0b;font-weight:600">⚠ 注意：API Key 等設定會上傳到你的 Firebase 帳號（young-app-library），請確認只在自己信任的環境使用。</span>
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="syncToCloud()" style="flex:1">⬆️ 備份到雲端</button>
+        <button class="btn btn2" onclick="restoreFromCloud()" style="flex:1">⬇️ 從雲端還原</button>
+      </div>
+      <div id="cloud-sync-st" style="font-size:12px;color:var(--g400);margin-top:8px"></div>
+    </div>
     <div class="set"><h3>🔐 帳號</h3><p style="font-size:13px;color:var(--g600);margin-bottom:10px">目前以 Google 帳號登入保護，僅 cyysongyy@gmail.com 可使用。</p><button class="btn btn2" onclick="doSignOut()">登出</button></div>
     <div class="set"><h3>🗂️ 資料</h3>
       <div class="hint">對話記錄只存在此裝置瀏覽器（localStorage）。清除瀏覽資料會一併消失，重要產出請自行複製保存。</div>
@@ -1209,6 +1220,66 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
 }).join('');}
 function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();const ghst=$('gh-token-st');if(ghst)ghst.textContent=loadGhToken()?'✓ 已設定 Token':'尚未設定';}
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
+
+/* ───────── 後端同步 ───────── */
+var SYNC_DOC='user_sync';
+var SYNC_KEYS=['pa_schedule','pa_admin_config','pa_sub_records','pa_gcal_cache','pa_gcal_url',
+               'pa_line_url','pa_line_uid','pa_meet_folder'];
+
+function _syncSt(msg,ok){
+  var el=document.getElementById('cloud-sync-st');
+  if(!el)return;
+  el.innerHTML='<span style="color:'+(ok===true?'var(--ok)':ok===false?'#ef4444':'var(--g400)')+'">'+msg+'</span>';
+}
+
+window.syncToCloud=function(){
+  if(!_fbRD){_syncSt('⚠️ Firebase 未連線',false);return;}
+  _syncSt('⬆️ 備份中…');
+  var payload={updatedAt:Date.now(),device:navigator.userAgent.slice(0,80)};
+  // settings (API keys + prefs)
+  payload.pa_set=JSON.stringify(S);
+  // other localStorage keys
+  SYNC_KEYS.forEach(function(k){
+    var v=localStorage.getItem(k);
+    if(v!=null)payload[k]=v;
+  });
+  _fbRD.collection('pa_config').doc(SYNC_DOC).set(payload,{merge:false})
+    .then(function(){
+      var ts=new Date().toLocaleString('zh-TW');
+      _syncSt('✅ 備份成功 '+ts,true);
+    })
+    .catch(function(e){_syncSt('❌ 備份失敗：'+e.message,false);});
+};
+
+window.restoreFromCloud=function(){
+  if(!_fbRD){_syncSt('⚠️ Firebase 未連線',false);return;}
+  if(!confirm('確定從雲端還原？本機設定（API Key、功課表、調課記錄等）將被覆蓋。'))return;
+  _syncSt('⬇️ 還原中…');
+  _fbRD.collection('pa_config').doc(SYNC_DOC).get()
+    .then(function(doc){
+      if(!doc.exists){_syncSt('⚠️ 雲端尚無備份資料',false);return;}
+      var d=doc.data();
+      // restore settings
+      if(d.pa_set){
+        try{
+          var parsed=JSON.parse(d.pa_set);
+          Object.assign(S,parsed);
+          saveS();
+        }catch(e){}
+      }
+      // restore other keys
+      SYNC_KEYS.forEach(function(k){
+        if(d[k]!=null)localStorage.setItem(k,d[k]);
+      });
+      var ts=d.updatedAt?new Date(d.updatedAt).toLocaleString('zh-TW'):'未知';
+      _syncSt('✅ 還原成功（備份時間：'+ts+'）',true);
+      // refresh UI
+      loadSet();
+      if(typeof renderKeys==='function')renderKeys();
+    })
+    .catch(function(e){_syncSt('❌ 還原失敗：'+e.message,false);});
+};
+
 /* ───────── init ───────── */
 
 /* ── Google Auth ── */
