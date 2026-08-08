@@ -1229,10 +1229,11 @@ function clearHist(){if(confirm('確定清除全部對話？此動作無法復�
 
 /* ───────── 後端同步（GAS） ───────── */
 var GAS_SYNC_KEY='pa_gas_sync_url';
+var GAS_SYNC_DEFAULT='https://script.google.com/macros/s/AKfycbxUd4gA-vYhaPq4C2XiQZoGnBmpnGeVf46p6rFHRmoXJMeKfAQjsQfLyGL2MQcNVkSZ/exec';
 var SYNC_KEYS=['pa_schedule','pa_admin_config','pa_sub_records','pa_gcal_cache','pa_gcal_url',
                'pa_line_url','pa_line_uid','pa_meet_folder'];
 
-function _getGasUrl(){return localStorage.getItem(GAS_SYNC_KEY)||'';}
+function _getGasUrl(){return localStorage.getItem(GAS_SYNC_KEY)||GAS_SYNC_DEFAULT;}
 
 function _syncSt(msg,ok){
   var el=document.getElementById('cloud-sync-st');
