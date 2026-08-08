@@ -1666,14 +1666,10 @@ window.startVoice=function(targetId, btn){
 
   /* ─ CSV template download ─ */
   window.downloadCsvTemplate=function(){
-    var csv='星期,節次,班級,科目,老師
-'
-      +'星期一,1,六甲班,數學,王老師
-'
-      +'星期一,2,五甲班,國語,李老師
-'
-      +'星期二,3,四甲班,英語,陳老師
-';
+    var csv='星期,節次,班級,科目,老師\n'
+      +'星期一,1,六甲班,數學,王老師\n'
+      +'星期一,2,五甲班,國語,李老師\n'
+      +'星期二,3,四甲班,英語,陳老師\n';
     var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
     var a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -1718,8 +1714,7 @@ window.startVoice=function(targetId, btn){
     var raw=(document.getElementById('auto-text').value||'').trim();
     if(!raw){st.textContent='請貼入文字或上傳 CSV 檔';return;}
 
-    var lines=raw.split(/?
-/).filter(function(l){return l.trim();});
+    var lines=raw.split(/\r?\n/).filter(function(l){return l.trim();});
     if(!lines.length){st.textContent='⚠️ 無法讀取資料';return;}
 
     // detect separator from first non-empty line
