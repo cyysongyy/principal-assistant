@@ -1622,6 +1622,11 @@ window.startVoice=function(targetId, btn){
     });
   }
 
+  /* expose render functions globally so other modules can call them */
+  window._schRenderStats=renderStats;
+  window._schRenderToday=renderToday;
+  window._schRenderConflict=renderConflictSelects;
+
 })();
 
 /* ── 自動辨識 / 匯入模式切換 ── */
@@ -2027,9 +2032,9 @@ window.startVoice=function(targetId, btn){
     document.querySelectorAll('.sch-tab').forEach(function(b){
       b.classList.toggle('on',b.dataset.tab===name);
     });
-    if(name==='stats'){if(typeof renderStats==='function')renderStats();}
-    if(name==='today'){if(typeof renderToday==='function')renderToday();}
-    if(name==='conflict'){if(typeof renderConflictSelects==='function')renderConflictSelects();}
+    if(name==='stats'){if(window._schRenderStats)window._schRenderStats();}
+    if(name==='today'){if(window._schRenderToday)window._schRenderToday();}
+    if(name==='conflict'){if(window._schRenderConflict)window._schRenderConflict();}
     if(name==='subsrec')renderSubsRec();
     if(name==='subspay'){initDates();renderPayCalc();}
     if(name==='admin')renderAdminPanel();
