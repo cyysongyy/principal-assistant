@@ -252,7 +252,7 @@ nav button .i{display:block;font-size:20px}
   <div id="v-set" class="view">
     <div class="set"><h3>🤖 AI 金鑰（存在本機瀏覽器，不會上傳）</h3>
       <label>貼上 API Key，自動識別廠牌（Gemini／Claude／OpenAI）</label>
-      <div style="display:flex;gap:8px"><select id="provsel" style="width:130px;padding:10px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">自動識別</option><option value="g">Gemini</option><option value="a">Claude</option><option value="o">OpenAI</option></select>
+      <div style="display:flex;gap:8px"><select id="provsel" style="width:130px;padding:10px;border:1px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px"><option value="">自動識別</option><option value="g">Gemini</option><option value="a">Claude</option><option value="o">OpenAI</option><option value="n">NVIDIA</option></select>
       <input type="text" id="newkey" placeholder="貼上任何 API Key" autocomplete="off" style="flex:1"></div>
       <button class="btn" onclick="addKey()">＋ 加入金鑰（自動識別）</button>
       <div id="klist" style="margin-top:6px"></div>
@@ -465,17 +465,46 @@ nav button .i{display:block;font-size:20px}
     </div>
     <!-- 匯入 -->
     <div id="sch-input" class="sch-panel">
-      <div class="fbox" style="margin-bottom:10px">
-        <h2 style="font-size:15px;margin-bottom:8px">📥 匯入功課表</h2>
-        <p style="font-size:12px;color:var(--g600);margin-bottom:10px;line-height:1.6">支援拍照、PDF 或直接貼上文字。使用 Gemini AI 自動辨識課表結構。</p>
+      <!-- 模式切換 -->
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="sch-tab on" id="imp-tab-auto" data-itab="auto" onclick="impTab('auto')" style="flex:1;border-radius:10px">⚡ 自動辨識</button>
+        <button class="sch-tab" id="imp-tab-ai" data-itab="ai" onclick="impTab('ai')" style="flex:1;border-radius:10px">🤖 AI 辨識</button>
+      </div>
+
+      <!-- 自動辨識面板 -->
+      <div id="imp-auto" class="fbox" style="margin-bottom:10px">
+        <h2 style="font-size:15px;margin-bottom:6px">⚡ 自動辨識（不需 AI）</h2>
+        <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">
+          從 Excel/Word 複製課表後貼入，或上傳 CSV 檔，系統自動解析欄位。<br>
+          欄位格式（任意順序）：<b>星期、節次、班級、科目、老師</b>
+        </p>
+        <label>上傳 CSV 檔</label>
+        <input type="file" id="auto-file" accept=".csv,.txt,.tsv" style="display:block;margin-bottom:8px;font-size:13px" onchange="autoFileLoad(this)">
+        <label>或貼上表格文字（Tab 或逗號分隔）</label>
+        <textarea id="auto-text" placeholder="範例：&#10;星期一	1	六甲班	數學	王怡文&#10;星期一	2	五甲班	國語	吳惠雅&#10;&#10;第一行可加標題列：星期、節、班級、科目、老師" style="min-height:120px;font-size:12px;font-family:monospace"></textarea>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="btn" onclick="doAutoImport()" style="flex:1">⚡ 自動解析並匯入</button>
+          <button class="btn btn2" onclick="downloadCsvTemplate()" style="flex:1;font-size:12px">📄 下載 CSV 範本</button>
+        </div>
+        <div id="auto-import-st" style="font-size:12px;color:var(--g400);margin-top:8px"></div>
+      </div>
+
+      <!-- AI 辨識面板 -->
+      <div id="imp-ai" class="fbox" style="margin-bottom:10px;display:none">
+        <h2 style="font-size:15px;margin-bottom:6px">🤖 AI 辨識</h2>
+        <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">
+          支援拍照、PDF 辨識。優先使用 Gemini，其次 NVIDIA、OpenAI。
+        </p>
+        <div id="ai-provider-st" style="font-size:12px;margin-bottom:8px"></div>
         <label>拍照 / 上傳圖片或 PDF</label>
-        <input type="file" id="sch-file" accept="image/*,.pdf,.docx,.doc" style="display:block;margin-bottom:8px;font-size:13px" onchange="schFileChange(this)">
+        <input type="file" id="sch-file" accept="image/*,.pdf" style="display:block;margin-bottom:8px;font-size:13px" onchange="schFileChange(this)">
         <div id="sch-preview" style="margin-bottom:8px"></div>
-        <label>或直接貼上文字課表</label>
-        <textarea id="sch-text" placeholder="可貼上課表文字（如從 Word/Excel 複製）…" style="min-height:100px;font-size:13px"></textarea>
+        <label>或直接貼上文字課表（讓 AI 整理）</label>
+        <textarea id="sch-text" placeholder="可貼上課表文字（如從 Word/Excel 複製）…" style="min-height:80px;font-size:13px"></textarea>
         <button class="btn" id="sch-ocr-btn" onclick="doSchImport()">🤖 AI 辨識並匯入</button>
         <div id="sch-import-st" style="font-size:12px;color:var(--g400);margin-top:8px"></div>
       </div>
+
       <div class="fbox">
         <h2 style="font-size:15px;margin-bottom:8px">📋 目前資料</h2>
         <div id="sch-data-summary"></div>
@@ -625,7 +654,7 @@ Young 目前的 GitHub 生態（cyysongyy 帳號）：gait（步態平衡）、5
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
 /* ───────── 狀態與儲存 ───────── */
-const S={gkey:'',okey:'',akey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',useSchool:false};
+const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false};
 try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-2.5-flash';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 (function fixModels(){const def={gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
@@ -1145,17 +1174,27 @@ async function callClaude(){
  const j=await r.json();const t=(j.content||[]).map(b=>b.text||'').join('');
  if(!t)throw new Error('Claude 回應為空');return t;}
 async function aiCall(){
- const pvs=[];if(S.gkey)pvs.push(callGemini);if(S.akey)pvs.push(callClaude);if(S.okey)pvs.push(callOpenAI);
+
+async function callNVIDIA(){
+  const res=await fetch('https://integrate.api.nvidia.com/v1/chat/completions',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.nvkey},
+    body:JSON.stringify({model:S.nvmodel,messages:[{role:'user',content:prompt}],temperature:0.1,max_tokens:16384})
+  });
+  const j=await res.json();
+  if(!res.ok)throw new Error(j.error?.message||res.status);
+  return j.choices[0].message.content;
+}
+ const pvs=[];if(S.gkey)pvs.push(callGemini);if(S.akey)pvs.push(callClaude);if(S.okey)pvs.push(callOpenAI);if(S.nvkey)pvs.push(callNVIDIA);
  let last;for(const p of pvs){try{return await p();}catch(e){last=e;}}
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
-const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI']];
-function detectKey(k){if(/^AIza/.test(k)||/^AQ/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
+const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI'],['nvkey','nvmodel','NVIDIA']];
+function detectKey(k){if(/^AIza/.test(k)||/^AQ/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^nvapi-/.test(k))return['nvkey','nvmodel','NVIDIA'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
 function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));}
 function addKey(){const k=$('newkey').value.trim();if(!k)return;
- const M={g:['gkey','gmodel','Gemini'],a:['akey','amodel','Claude'],o:['okey','omodel','OpenAI']};
+ const M={g:['gkey','gmodel','Gemini'],a:['akey','amodel','Claude'],o:['okey','omodel','OpenAI'],n:['nvkey','nvmodel','NVIDIA']};
  const d=M[$('provsel').value]||detectKey(k);
- if(!d){alert('自動識別不出這把金鑰（Gemini=AIza/AQ. 開頭、Claude=sk-ant-、OpenAI=sk-）。\n請用左邊選單手動指定廠牌後再按一次加入。');return;}
+ if(!d){alert('自動識別不出金鑰格式\nGemini=AIza/AQ.、Claude=sk-ant-、OpenAI=sk-、NVIDIA=nvapi-\n請用左邊選單手動指定廠牌後再試。');return;}
  S[d[0]]=k;saveS();$('newkey').value='';renderKeys();alert('已加入 '+d[2]+' 金鑰 ✓');}
 function delKey(f){if(confirm('移除這把金鑰？')){S[f]='';saveS();renderKeys();}}
 function setModel(mf,el){const v=el.value.trim();
@@ -1510,38 +1549,264 @@ window.startVoice=function(targetId, btn){
     var st=document.getElementById('sch-import-st');
     var textVal=(document.getElementById('sch-text').value||'').trim();
     if(!_schFileData&&!textVal){if(st)st.textContent='請先上傳圖片/PDF 或貼上文字';return;}
-    if(!S.gkey){if(st)st.textContent='⚠️ 請先在設定填入 Gemini API Key';return;}
-    if(st)st.textContent='🤖 AI 辨識中…';
+    var pvs=[];
+    if(S.gkey)pvs.push({name:'Gemini',fn:schCallGemini});
+    if(S.nvkey)pvs.push({name:'NVIDIA',fn:schCallNvidia});
+    if(S.okey)pvs.push({name:'OpenAI',fn:schCallOpenAI});
+    if(!pvs.length){if(st)st.textContent='⚠️ 請先在設定填入 API Key（Gemini / NVIDIA / OpenAI）';return;}
+    if(st)st.textContent='🤖 AI 辨識中（'+pvs[0].name+'）…';
     var btn=document.getElementById('sch-ocr-btn');if(btn)btn.disabled=true;
     var prompt='這是學校功課表。請提取所有課程，輸出 JSON：\n{"rows":[{"class":"班級如六甲班","day":1,"period":1,"teacher":"姓名","subject":"科目"}]}\n規則：空格或自習省略；僅輸出JSON。';
-    var parts=[{text:(textVal?'文字課表：\n'+textVal+'\n\n'+prompt:prompt)}];
-    if(_schFileData)parts.push({inlineData:{mimeType:_schFileData.mimeType,data:_schFileData.base64}});
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(S.gmodel)+':generateContent?key='+encodeURIComponent(S.gkey),
+
+    function tryNext(idx){
+      if(idx>=pvs.length){if(btn)btn.disabled=false;if(st)st.textContent='⚠️ 所有 AI 服務均失敗';return;}
+      var pv=pvs[idx];
+      if(st)st.textContent='🤖 '+pv.name+' 辨識中…';
+      pv.fn(prompt,textVal,_schFileData).then(function(text){
+        if(btn)btn.disabled=false;
+        var m=text.match(/\{[\s\S]*"rows"[\s\S]*\}/);
+        if(!m){if(st)st.textContent='⚠️ '+pv.name+' 無法解析，嘗試下一個…';tryNext(idx+1);return;}
+        try{
+          var parsed=JSON.parse(m[0]);
+          if(!parsed.rows||!Array.isArray(parsed.rows))throw new Error('no rows');
+          var data=loadSch()||{rows:[]};
+          var nextId=Math.max(0,...data.rows.map(function(r){return r.id||0;}))+1;
+          parsed.rows.forEach(function(r,i){r.id=nextId+i;});
+          data.rows=data.rows.concat(parsed.rows);
+          data.updatedAt=Date.now();
+          saveSch(data);
+          if(st)st.innerHTML='<span style="color:var(--ok);font-weight:700">✅ ['+pv.name+'] 成功匯入 '+parsed.rows.length+' 筆！（共 '+data.rows.length+' 筆）</span>';
+          _schFileData=null;
+          var prev=document.getElementById('sch-preview');if(prev)prev.innerHTML='';
+          var txa=document.getElementById('sch-text');if(txa)txa.value='';
+          var fi=document.getElementById('sch-file');if(fi)fi.value='';
+        }catch(e){if(st)st.textContent='⚠️ 解析失敗：'+e.message;tryNext(idx+1);}
+      }).catch(function(e){if(st)st.textContent='⚠️ '+pv.name+' 失敗：'+e.message+'，嘗試下一個…';tryNext(idx+1);});
+    }
+    tryNext(0);
+  };
+
+  function schCallGemini(prompt,text,fileData){
+    var parts=[{text:(text?'文字課表：\n'+text+'\n\n'+prompt:prompt)}];
+    if(fileData)parts.push({inlineData:{mimeType:fileData.mimeType,data:fileData.base64}});
+    return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(S.gmodel)+':generateContent?key='+encodeURIComponent(S.gkey),
       {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:parts}],generationConfig:{temperature:0.1,maxOutputTokens:16384}})})
     .then(function(r){return r.json();})
     .then(function(j){
-      if(btn)btn.disabled=false;
-      var text=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text)||'';
-      if(!text){if(st)st.textContent='⚠️ AI 未回傳結果';return;}
-      var m=text.match(/\{[\s\S]*"rows"[\s\S]*\}/);
-      if(!m){if(st)st.textContent='⚠️ 無法解析，請確認格式\n'+text.slice(0,200);return;}
-      try{
-        var parsed=JSON.parse(m[0]);
-        if(!parsed.rows||!Array.isArray(parsed.rows))throw new Error('no rows');
-        var data=loadSch()||{rows:[]};
-        var nextId=Math.max(0,...data.rows.map(function(r){return r.id||0;}))+1;
-        parsed.rows.forEach(function(r,i){r.id=nextId+i;});
-        data.rows=data.rows.concat(parsed.rows);
-        data.updatedAt=Date.now();
-        saveSch(data);
-        if(st)st.textContent='✅ 成功匯入 '+parsed.rows.length+' 筆！（共 '+data.rows.length+' 筆）';
-        _schFileData=null;
-        document.getElementById('sch-preview').innerHTML='';
-        document.getElementById('sch-text').value='';
-        document.getElementById('sch-file').value='';
-      }catch(e){if(st)st.textContent='⚠️ 解析失敗：'+e.message;}
-    }).catch(function(e){if(btn)btn.disabled=false;if(st)st.textContent='⚠️ 失敗：'+e.message;});
+      var t=(j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0]&&j.candidates[0].content.parts[0].text)||'';
+      if(!t)throw new Error('Gemini 未回傳結果');return t;
+    });
+  }
+
+  function schCallNvidia(prompt,text,fileData){
+    var msg=(text?'文字課表：\n'+text+'\n\n':'')+prompt;
+    return fetch('https://integrate.api.nvidia.com/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.nvkey},
+      body:JSON.stringify({model:S.nvmodel,messages:[{role:'user',content:msg}],temperature:0.1,max_tokens:16384})
+    }).then(function(r){return r.json();})
+    .then(function(j){
+      if(!j.choices||!j.choices[0])throw new Error('NVIDIA 未回傳結果');
+      return j.choices[0].message.content;
+    });
+  }
+
+  function schCallOpenAI(prompt,text,fileData){
+    var msgs=[{role:'user',content:(text?'文字課表：\n'+text+'\n\n':'')+prompt}];
+    return fetch('https://api.openai.com/v1/chat/completions',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+S.okey},
+      body:JSON.stringify({model:S.omodel,messages:msgs,temperature:0.1,max_tokens:16384})
+    }).then(function(r){return r.json();})
+    .then(function(j){
+      if(!j.choices||!j.choices[0])throw new Error('OpenAI 未回傳結果');
+      return j.choices[0].message.content;
+    });
+  }
+
+})();
+
+/* ── 自動辨識 / 匯入模式切換 ── */
+(function(){
+  var DAY_MAP={
+    '星期一':1,'週一':1,'一':1,'Mon':1,'Monday':1,'1':1,
+    '星期二':2,'週二':2,'二':2,'Tue':2,'Tuesday':2,'2':2,
+    '星期三':3,'週三':3,'三':3,'Wed':3,'Wednesday':3,'3':3,
+    '星期四':4,'週四':4,'四':4,'Thu':4,'Thursday':4,'4':4,
+    '星期五':5,'週五':5,'五':5,'Fri':5,'Friday':5,'5':5
   };
+
+  /* ─ mode toggle ─ */
+  window.impTab=function(mode){
+    document.getElementById('imp-auto').style.display=mode==='auto'?'':'none';
+    document.getElementById('imp-ai').style.display=mode==='ai'?'':'none';
+    document.querySelectorAll('[data-itab]').forEach(function(b){
+      b.classList.toggle('on',b.dataset.itab===mode);
+    });
+    if(mode==='ai'){
+      var pvs=[];
+      if(S.gkey)pvs.push('Gemini');
+      if(S.nvkey)pvs.push('NVIDIA');
+      if(S.okey)pvs.push('OpenAI');
+      var st=document.getElementById('ai-provider-st');
+      if(st)st.innerHTML=pvs.length
+        ?'已設定：'+pvs.map(function(p){return '<span class="sch-badge sc-free">'+p+'</span>';}).join(' → ')+' <span style="color:var(--g400)">（依序備援）</span>'
+        :'<span style="color:#ef4444">⚠️ 尚未設定任何 API Key，請先至「設定」新增</span>';
+    }
+  };
+
+  /* ─ load CSV file ─ */
+  window.autoFileLoad=function(input){
+    var file=input.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var ta=document.getElementById('auto-text');
+      if(ta)ta.value=e.target.result;
+    };
+    reader.readAsText(file,'UTF-8');
+  };
+
+  /* ─ CSV template download ─ */
+  window.downloadCsvTemplate=function(){
+    var csv='星期,節次,班級,科目,老師
+'
+      +'星期一,1,六甲班,數學,王老師
+'
+      +'星期一,2,五甲班,國語,李老師
+'
+      +'星期二,3,四甲班,英語,陳老師
+';
+    var blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='課表範本.csv';
+    a.click();
+  };
+
+  /* ─ detect separator ─ */
+  function detectSep(line){
+    if(line.indexOf('	')>=0)return '	';
+    if(line.indexOf(',')>=0)return ',';
+    if(line.indexOf('，')>=0)return '，';
+    return null;
+  }
+
+  /* ─ map header to field name ─ */
+  function mapHeader(h){
+    h=(h||'').trim().replace(/\s/g,'');
+    if(/^(星期|週|day)/i.test(h))return 'day';
+    if(/^(節|第|period|節次|節數)/i.test(h))return 'period';
+    if(/^(班|class|班級)/i.test(h))return 'class';
+    if(/^(科|subject|科目|課程)/i.test(h))return 'subject';
+    if(/^(師|老師|teacher|教師)/i.test(h))return 'teacher';
+    return null;
+  }
+
+  /* ─ parse a single token as day number ─ */
+  function parseDay(v){
+    v=(v||'').trim();
+    if(DAY_MAP[v]!==undefined)return DAY_MAP[v];
+    // try stripping prefix
+    var m=v.match(/([一二三四五])/);
+    if(m)return DAY_MAP[m[1]]||0;
+    var n=parseInt(v);
+    if(n>=1&&n<=5)return n;
+    return 0;
+  }
+
+  /* ─ main auto import ─ */
+  window.doAutoImport=function(){
+    var st=document.getElementById('auto-import-st');if(!st)return;
+    var raw=(document.getElementById('auto-text').value||'').trim();
+    if(!raw){st.textContent='請貼入文字或上傳 CSV 檔';return;}
+
+    var lines=raw.split(/?
+/).filter(function(l){return l.trim();});
+    if(!lines.length){st.textContent='⚠️ 無法讀取資料';return;}
+
+    // detect separator from first non-empty line
+    var sep=detectSep(lines[0]);
+    if(!sep){st.textContent='⚠️ 無法識別分隔符（請使用 Tab 或逗號）';return;}
+
+    var cells=lines.map(function(l){return l.split(sep).map(function(c){return c.trim().replace(/^"|"$/g,'');});});
+
+    // detect header row
+    var colMap=null;
+    var dataStart=0;
+    var firstRow=cells[0];
+    var mapped=firstRow.map(mapHeader);
+    if(mapped.filter(Boolean).length>=3){
+      colMap={};
+      mapped.forEach(function(name,i){if(name)colMap[name]=i;});
+      dataStart=1;
+    }
+
+    // guess column order if no header: try to infer
+    var parsed=[];
+    var errors=0;
+
+    if(colMap){
+      // header-based
+      cells.slice(dataStart).forEach(function(row,ri){
+        var day=colMap.day!==undefined?parseDay(row[colMap.day]):0;
+        var period=parseInt(row[colMap.period])||0;
+        var cls=(row[colMap.class]||'').trim();
+        var subject=(row[colMap.subject]||'').trim();
+        var teacher=(row[colMap.teacher]||'').trim();
+        if(!day||!period){errors++;return;}
+        if(!cls&&!teacher){errors++;return;}
+        if(!cls.match(/班/))cls=cls+(cls?'班':'');
+        parsed.push({day:day,period:period,class:cls,subject:subject,teacher:teacher});
+      });
+    } else {
+      // no header — positional detection
+      // guess: if first col looks like day, second like period, then class, subject, teacher
+      // OR: period, day, class, subject, teacher
+      cells.forEach(function(row){
+        if(row.length<3)return;
+        var day=0,period=0,cls='',subject='',teacher='';
+        // try position 0 as day
+        var d0=parseDay(row[0]);
+        if(d0){
+          day=d0;period=parseInt(row[1])||0;
+          cls=row[2]||'';subject=row[3]||'';teacher=row[4]||'';
+        } else {
+          // try finding day anywhere in row
+          for(var i=0;i<row.length;i++){
+            var d=parseDay(row[i]);
+            if(d){day=d;
+              // period is adjacent int
+              for(var j=0;j<row.length;j++){
+                if(j!==i&&/^\d+$/.test(row[j])&&parseInt(row[j])<=10){period=parseInt(row[j]);break;}
+              }
+              break;
+            }
+          }
+          // remaining non-day, non-period cols
+          var rest=row.filter(function(c,i2){return parseDay(c)===0&&!/^\d+$/.test(c)&&c;});
+          cls=rest[0]||'';subject=rest[1]||'';teacher=rest[2]||'';
+        }
+        if(!day||!period){errors++;return;}
+        if(!cls.match(/班/)&&cls)cls=cls+'班';
+        parsed.push({day:day,period:period,class:cls,subject:subject,teacher:teacher});
+      });
+    }
+
+    if(!parsed.length){st.textContent='⚠️ 解析 0 筆，請確認格式（需要星期、節次欄位）';return;}
+
+    // merge into localStorage
+    var data=loadSch()||{rows:[]};
+    var nextId=Math.max(0,...(data.rows||[]).map(function(r){return r.id||0;}))+1;
+    parsed.forEach(function(r,i){r.id=nextId+i;});
+    data.rows=(data.rows||[]).concat(parsed);
+    data.updatedAt=Date.now();
+    saveSch(data);
+
+    document.getElementById('auto-text').value='';
+    document.getElementById('auto-file').value='';
+    st.innerHTML='<span style="color:var(--ok);font-weight:700">✅ 成功匯入 '+parsed.length+' 筆'+(errors?' （'+errors+' 筆略過）':'')+' ！共 '+data.rows.length+' 筆</span>';
+  };
+
+  function loadSch(){try{return JSON.parse(localStorage.getItem('pa_schedule')||'null');}catch(e){return null;}}
+  function saveSch(d){localStorage.setItem('pa_schedule',JSON.stringify(d));}
 
 })();
 
