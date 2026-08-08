@@ -122,6 +122,19 @@ nav button .i{display:block;font-size:20px}
 .sch-section-title{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .sc-free{background:#d1fae5;color:#065f46}
 .sc-busy{background:#fee2e2;color:#991b1b}
+.pay-card{background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:12px;margin-bottom:8px;}
+.pay-card-name{font-size:14px;font-weight:700;color:var(--g900);}
+.pay-card-detail{font-size:12px;color:var(--g600);margin-top:2px;}
+.pay-card-total{font-size:18px;font-weight:800;color:var(--pri);margin-top:4px;}
+.adm-card{background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.adm-title{font-size:12px;color:var(--g400);}
+.adm-name{font-size:14px;font-weight:700;color:var(--g900);}
+.adm-reduce{font-size:12px;color:var(--ok);font-weight:700;}
+.sr-card{background:var(--g50);border:1px solid var(--g200);border-radius:10px;padding:10px 12px;margin-bottom:6px;position:relative;}
+.sr-badge{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;font-weight:700;margin-right:4px;}
+.sr-internal{background:#dbeafe;color:#1d4ed8;}
+.sr-external{background:#fef9c3;color:#854d0e;}
+.sr-agent{background:#f3e8ff;color:#6b21a8;}
 .sc-day-head{font-size:12px;font-weight:700;color:var(--pri);margin:10px 0 4px}
 .sc-slot{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px;border-bottom:1px solid var(--g100)}
 .sc-slot:last-child{border-bottom:none}
@@ -296,7 +309,10 @@ nav button .i{display:block;font-size:20px}
     <div class="sch-tabs" id="sch-tab-bar">
       <button class="sch-tab on" data-tab="stats" onclick="schTab('stats')">📊 統計</button>
       <button class="sch-tab" data-tab="today" onclick="schTab('today')">📅 今日</button>
-      <button class="sch-tab" data-tab="conflict" onclick="schTab('conflict')">⚠️ 調課</button>
+      <button class="sch-tab" data-tab="conflict" onclick="schTab('conflict')">⚠️ 衝突</button>
+      <button class="sch-tab" data-tab="subsrec" onclick="schTab('subsrec')">🔄 調課</button>
+      <button class="sch-tab" data-tab="subspay" onclick="schTab('subspay')">💰 代課費</button>
+      <button class="sch-tab" data-tab="admin" onclick="schTab('admin')">👔 行政</button>
       <button class="sch-tab" data-tab="manage" onclick="schTab('manage')">✏️ 管理</button>
       <button class="sch-tab" data-tab="input" onclick="schTab('input')">📥 匯入</button>
     </div>
@@ -333,6 +349,90 @@ nav button .i{display:block;font-size:20px}
       </div>
       <div id="sc-conflict-result"></div>
     </div>
+    <!-- 調課記錄 -->
+    <div id="sch-subsrec" class="sch-panel">
+      <div class="sch-section-title" style="margin-bottom:8px">🔄 新增調課記錄</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <input id="sr-date" type="date" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;grid-column:1/-1">
+        <select id="sr-day" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+          <option value="1">星期一</option><option value="2">星期二</option>
+          <option value="3">星期三</option><option value="4">星期四</option><option value="5">星期五</option>
+        </select>
+        <select id="sr-period" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+          <option>1</option><option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option>
+        </select>
+        <input id="sr-orig" placeholder="原任課老師" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+        <input id="sr-class" placeholder="班級" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+        <input id="sr-sub" placeholder="代課老師（姓名）" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;grid-column:1/-1">
+        <select id="sr-type" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+          <option value="internal">校內互調</option>
+          <option value="external">外聘代課</option>
+          <option value="agent">代理教師</option>
+        </select>
+        <input id="sr-reason" placeholder="原因（請假/研習/公差…）" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+      </div>
+      <button onclick="srAdd()" style="width:100%;padding:10px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">＋ 新增調課記錄</button>
+      <div class="sch-section-title" style="margin:14px 0 6px">📋 調課紀錄</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input id="sr-search" placeholder="🔍 搜尋老師/班級" style="flex:1;padding:7px 10px;border:1px solid var(--g200);border-radius:8px;font-size:13px" oninput="renderSubsRec()">
+        <select id="sr-filter-type" style="padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)" onchange="renderSubsRec()">
+          <option value="">全部類型</option>
+          <option value="internal">校內互調</option>
+          <option value="external">外聘代課</option>
+          <option value="agent">代理教師</option>
+        </select>
+      </div>
+      <div id="sr-list"></div>
+    </div>
+
+    <!-- 代課費計算 -->
+    <div id="sch-subspay" class="sch-panel">
+      <div class="sch-section-title" style="margin-bottom:8px">💰 代課費設定</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+        <div style="grid-column:1/-1;font-size:12px;color:var(--g600)">每節代課費（元）：</div>
+        <div><label style="font-size:12px;color:var(--g600)">外聘代課</label><input id="rate-external" type="number" value="540" style="width:100%;margin-top:2px;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px" oninput="renderPayCalc()"></div>
+        <div><label style="font-size:12px;color:var(--g600)">代理教師</label><input id="rate-agent" type="number" value="540" style="width:100%;margin-top:2px;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px" oninput="renderPayCalc()"></div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input id="pay-from" type="date" style="flex:1;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px" oninput="renderPayCalc()">
+        <span style="line-height:34px;color:var(--g400)">～</span>
+        <input id="pay-to" type="date" style="flex:1;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px" oninput="renderPayCalc()">
+        <button onclick="paySetMonth(0)" style="padding:7px 10px;border:1px solid var(--g200);background:var(--g50);border-radius:8px;font-size:12px;cursor:pointer">本月</button>
+      </div>
+      <div id="pay-result"></div>
+    </div>
+
+    <!-- 行政減課 -->
+    <div id="sch-admin" class="sch-panel">
+      <div class="sch-section-title" style="margin-bottom:8px">👔 行政職務減課設定</div>
+      <div style="font-size:12px;color:var(--g600);margin-bottom:8px">設定各行政職務每週減課節數，系統自動計算實際授課節數與行政減課補差。</div>
+      <div id="admin-list"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin:10px 0;align-items:end">
+        <div>
+          <label style="font-size:12px;color:var(--g600)">職稱</label>
+          <input id="adm-title" placeholder="如：教務主任" style="width:100%;margin-top:2px;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--g600)">姓名</label>
+          <input id="adm-name" placeholder="老師姓名" style="width:100%;margin-top:2px;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:18px">
+          <div>
+            <label style="font-size:11px;color:var(--g600)">減課節</label>
+            <input id="adm-reduce" type="number" value="4" min="0" max="20" style="width:100%;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--g600)">超額補差(元/節)</label>
+            <input id="adm-extra-rate" type="number" value="540" min="0" style="width:100%;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:13px">
+          </div>
+        </div>
+      </div>
+      <button onclick="admAdd()" style="width:100%;padding:10px;background:var(--pri);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:14px">＋ 新增職務</button>
+      <div class="sch-section-title" style="margin-bottom:8px">📊 行政人員授課統計</div>
+      <div id="admin-stats"></div>
+    </div>
+
     <!-- 管理 -->
     <div id="sch-manage" class="sch-panel">
       <div style="display:flex;gap:6px;margin-bottom:8px">
@@ -1443,6 +1543,251 @@ window.startVoice=function(targetId, btn){
     }).catch(function(e){if(btn)btn.disabled=false;if(st)st.textContent='⚠️ 失敗：'+e.message;});
   };
 
+})();
+
+/* ── 調課記錄 / 代課費 / 行政減課 JS ── */
+(function(){
+  var SR_KEY='pa_sub_records';
+  var ADM_KEY='pa_admin_config';
+  var DAY_NAMES=['','星期一','星期二','星期三','星期四','星期五'];
+  var TYPE_LABEL={internal:'校內互調',external:'外聘代課',agent:'代理教師'};
+  var TYPE_CSS={internal:'sr-internal',external:'sr-external',agent:'sr-agent'};
+
+  function loadSR(){try{return JSON.parse(localStorage.getItem(SR_KEY)||'[]');}catch(e){return[];}}
+  function saveSR(d){localStorage.setItem(SR_KEY,JSON.stringify(d));}
+  function loadAdm(){try{return JSON.parse(localStorage.getItem(ADM_KEY)||'[]');}catch(e){return[];}}
+  function saveAdm(d){localStorage.setItem(ADM_KEY,JSON.stringify(d));}
+  function loadSch(){try{return JSON.parse(localStorage.getItem('pa_schedule')||'null');}catch(e){return null;}}
+
+  /* ─ auto set today date ─ */
+  function initDates(){
+    var today=new Date().toISOString().slice(0,10);
+    var d=document.getElementById('sr-date');if(d&&!d.value)d.value=today;
+    var pf=document.getElementById('pay-from');
+    var pt=document.getElementById('pay-to');
+    if(pf&&!pf.value){pf.value=today.slice(0,8)+'01';}
+    if(pt&&!pt.value){pt.value=today;}
+  }
+
+  /* ─ sync day-of-week from date ─ */
+  window.srSyncDay=function(){
+    var d=document.getElementById('sr-date');
+    if(!d||!d.value)return;
+    var dow=new Date(d.value).getDay();
+    var sel=document.getElementById('sr-day');
+    if(sel&&dow>=1&&dow<=5)sel.value=String(dow);
+  };
+
+  /* wire date change */
+  document.addEventListener('change',function(e){if(e.target&&e.target.id==='sr-date')srSyncDay();});
+
+  /* ─ Add substitution record ─ */
+  window.srAdd=function(){
+    var date=(document.getElementById('sr-date')||{}).value||'';
+    var day=parseInt((document.getElementById('sr-day')||{}).value||1);
+    var period=parseInt((document.getElementById('sr-period')||{}).value||1);
+    var orig=((document.getElementById('sr-orig')||{}).value||'').trim();
+    var cls=((document.getElementById('sr-class')||{}).value||'').trim();
+    var sub=((document.getElementById('sr-sub')||{}).value||'').trim();
+    var type=(document.getElementById('sr-type')||{}).value||'internal';
+    var reason=((document.getElementById('sr-reason')||{}).value||'').trim();
+    if(!date||!orig||!sub){alert('日期、原任課老師、代課老師為必填');return;}
+    var records=loadSR();
+    records.push({id:Date.now(),date:date,day:day,period:period,origTeacher:orig,class:cls,subTeacher:sub,type:type,reason:reason});
+    saveSR(records);
+    ['sr-orig','sr-class','sr-sub','sr-reason'].forEach(function(k){var el=document.getElementById(k);if(el)el.value='';});
+    renderSubsRec();
+    renderPayCalc();
+  };
+
+  /* ─ Delete substitution record ─ */
+  window.srDel=function(id){
+    if(!confirm('確定刪除此筆調課紀錄？'))return;
+    saveSR(loadSR().filter(function(r){return r.id!==id;}));
+    renderSubsRec();renderPayCalc();
+  };
+
+  /* ─ Render substitution records ─ */
+  window.renderSubsRec=function(){
+    initDates();
+    var el=document.getElementById('sr-list');if(!el)return;
+    var records=loadSR();
+    var q=((document.getElementById('sr-search')||{}).value||'').trim();
+    var ft=((document.getElementById('sr-filter-type')||{}).value||'');
+    var filtered=records.filter(function(r){
+      var match=!q||(r.origTeacher+r.subTeacher+r.class).indexOf(q)>=0;
+      var typeOk=!ft||r.type===ft;
+      return match&&typeOk;
+    });
+    filtered.sort(function(a,b){return b.date.localeCompare(a.date)||b.id-a.id;});
+    if(!filtered.length){el.innerHTML='<div class="sch-empty">尚無調課記錄</div>';return;}
+    el.innerHTML=filtered.map(function(r){
+      var badge='<span class="sr-badge '+(TYPE_CSS[r.type]||'')+'">'+TYPE_LABEL[r.type]+'</span>';
+      return '<div class="sr-card">'
+        +'<div style="display:flex;justify-content:space-between;align-items:start">'
+        +'<div>'+badge+'<span style="font-size:12px;color:var(--g600)">'+r.date+' '+DAY_NAMES[r.day]+' 第'+r.period+'節'+(r.class?' ／ '+r.class:'')+'</span></div>'
+        +'<button onclick="srDel('+r.id+')" style="border:none;background:none;cursor:pointer;font-size:14px;color:var(--g400)">🗑️</button>'
+        +'</div>'
+        +'<div style="margin-top:4px;font-size:14px"><b>'+r.origTeacher+'</b> <span style="color:var(--g400)">→</span> <b style="color:var(--pri)">'+r.subTeacher+'</b></div>'
+        +(r.reason?'<div style="font-size:12px;color:var(--g600);margin-top:2px">原因：'+r.reason+'</div>':'')
+        +'</div>';
+    }).join('');
+  };
+
+  /* ─ Pay calculation ─ */
+  window.paySetMonth=function(offset){
+    var d=new Date();d.setMonth(d.getMonth()+offset);
+    var y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0');
+    var last=new Date(y,d.getMonth()+1,0).getDate();
+    var pf=document.getElementById('pay-from');
+    var pt=document.getElementById('pay-to');
+    if(pf)pf.value=y+'-'+m+'-01';
+    if(pt)pt.value=y+'-'+m+'-'+String(last).padStart(2,'0');
+    renderPayCalc();
+  };
+
+  window.renderPayCalc=function(){
+    initDates();
+    var el=document.getElementById('pay-result');if(!el)return;
+    var from=((document.getElementById('pay-from')||{}).value||'');
+    var to=((document.getElementById('pay-to')||{}).value||'');
+    var rateExt=parseFloat((document.getElementById('rate-external')||{}).value||540);
+    var rateAgt=parseFloat((document.getElementById('rate-agent')||{}).value||540);
+    var records=loadSR().filter(function(r){
+      return (r.type==='external'||r.type==='agent')&&(!from||r.date>=from)&&(!to||r.date<=to);
+    });
+    if(!records.length){el.innerHTML='<div class="sch-empty">此期間無外聘/代理代課紀錄</div>';return;}
+    var byTeacher={};
+    records.forEach(function(r){
+      if(!byTeacher[r.subTeacher])byTeacher[r.subTeacher]={type:r.type,periods:0,records:[]};
+      byTeacher[r.subTeacher].periods++;
+      byTeacher[r.subTeacher].records.push(r);
+      if(!byTeacher[r.subTeacher].type)byTeacher[r.subTeacher].type=r.type;
+    });
+    var totalPay=0;
+    var cards=Object.keys(byTeacher).sort().map(function(name){
+      var info=byTeacher[name];
+      var rate=info.type==='agent'?rateAgt:rateExt;
+      var pay=info.periods*rate;
+      totalPay+=pay;
+      var badge='<span class="sr-badge '+(TYPE_CSS[info.type]||'')+'">'+TYPE_LABEL[info.type]+'</span>';
+      return '<div class="pay-card">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div><span class="pay-card-name">'+name+'</span> '+badge+'</div>'
+        +'<div class="pay-card-total">NT$'+pay.toLocaleString()+'</div>'
+        +'</div>'
+        +'<div class="pay-card-detail">共 '+info.periods+' 節 × NT$'+rate+'/節</div>'
+        +'<div style="margin-top:6px;font-size:11px;color:var(--g400)">'
+        +info.records.map(function(r){return r.date+' 第'+r.period+'節'+(r.class?' '+r.class:'');}).join('、')
+        +'</div></div>';
+    }).join('');
+    el.innerHTML=cards
+      +'<div style="background:var(--pril);border:1px solid var(--pri);border-radius:10px;padding:12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center">'
+      +'<span style="font-size:13px;font-weight:700;color:var(--prid)">合計應付代課費</span>'
+      +'<span style="font-size:20px;font-weight:800;color:var(--prid)">NT$'+totalPay.toLocaleString()+'</span>'
+      +'</div>';
+  };
+
+  /* ─ Admin reductions ─ */
+  window.admAdd=function(){
+    var title=((document.getElementById('adm-title')||{}).value||'').trim();
+    var name=((document.getElementById('adm-name')||{}).value||'').trim();
+    var reduce=parseInt((document.getElementById('adm-reduce')||{}).value||4);
+    var extraRate=parseFloat((document.getElementById('adm-extra-rate')||{}).value||540);
+    if(!title||!name){alert('職稱與姓名為必填');return;}
+    var admins=loadAdm();
+    admins.push({id:Date.now(),title:title,name:name,reduce:reduce,extraRate:extraRate});
+    saveAdm(admins);
+    ['adm-title','adm-name'].forEach(function(k){var el=document.getElementById(k);if(el)el.value='';});
+    renderAdminPanel();
+  };
+  window.admDel=function(id){
+    if(!confirm('確定刪除？'))return;
+    saveAdm(loadAdm().filter(function(r){return r.id!==id;}));
+    renderAdminPanel();
+  };
+
+  window.renderAdminPanel=function(){
+    var el=document.getElementById('admin-list');
+    var st=document.getElementById('admin-stats');
+    var admins=loadAdm();
+    if(el){
+      if(!admins.length){el.innerHTML='<div class="sch-empty">尚未設定行政職務</div>';}
+      else{
+        el.innerHTML=admins.map(function(a){
+          return '<div class="adm-card">'
+            +'<div style="flex:1"><div class="adm-title">'+a.title+'</div><div class="adm-name">'+a.name+'</div></div>'
+            +'<div style="text-align:right"><div class="adm-reduce">−'+a.reduce+' 節/週</div>'
+            +'<div style="font-size:11px;color:var(--g400)">超額補差 NT$'+a.extraRate+'/節</div></div>'
+            +'<button onclick="admDel('+a.id+')" style="border:none;background:none;cursor:pointer;font-size:14px;color:var(--g400)">🗑️</button>'
+            +'</div>';
+        }).join('');
+      }
+    }
+    if(!st)return;
+    var sch=loadSch();
+    if(!sch||!sch.rows){st.innerHTML='<div class="sch-empty">請先載入功課表</div>';return;}
+    var schRows=sch.rows;
+    var teacherWeekly={};
+    schRows.forEach(function(r){
+      if(!r.teacher)return;
+      if(!teacherWeekly[r.teacher])teacherWeekly[r.teacher]=0;
+      teacherWeekly[r.teacher]++;
+    });
+    if(!admins.length){st.innerHTML='<div class="sch-empty">尚未設定行政職務，請上方新增</div>';return;}
+    st.innerHTML='<div style="overflow-x:auto"><table class="sch-tbl">'
+      +'<tr><th>職稱</th><th>姓名</th><th>週授課節數</th><th>應減節數</th><th>實際應上</th><th>差異</th><th>補差費</th></tr>'
+      +admins.map(function(a){
+        var actual=teacherWeekly[a.name]||0;
+        var expected=actual-a.reduce;if(expected<0)expected=0;
+        var diff=actual-expected;
+        var extra=diff>0?diff*a.extraRate:0;
+        var diffColor=diff>0?'color:#ef4444;font-weight:700':'color:var(--ok);font-weight:700';
+        return '<tr>'
+          +'<td>'+a.title+'</td>'
+          +'<td>'+a.name+'</td>'
+          +'<td style="text-align:center">'+actual+'</td>'
+          +'<td style="text-align:center;color:var(--ok)">−'+a.reduce+'</td>'
+          +'<td style="text-align:center;font-weight:700">'+expected+'</td>'
+          +'<td style="text-align:center;'+diffColor+'">'+(diff>0?'+':'')+diff+'</td>'
+          +'<td style="text-align:right;color:var(--pri);font-weight:700">'+(extra?'NT$'+extra.toLocaleString():'—')+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</table></div>'
+      +'<div style="font-size:12px;color:var(--g400);margin-top:8px">※ 差異欄 > 0 表示超額授課，建議支付補差費。</div>';
+  };
+
+  /* ─ Hook into schTab ─ */
+  var _origSchTab=window.schTab;
+  window.schTab=function(name){
+    var panels=['stats','today','conflict','subsrec','subspay','admin','manage','input'];
+    panels.forEach(function(t){
+      var p=document.getElementById('sch-'+t);if(p)p.classList.toggle('active',t===name);
+    });
+    document.querySelectorAll('.sch-tab').forEach(function(b){
+      b.classList.toggle('on',b.dataset.tab===name);
+    });
+    if(name==='stats'){if(typeof renderStats==='function')renderStats();}
+    if(name==='today'){if(typeof renderToday==='function')renderToday();}
+    if(name==='conflict'){if(typeof renderConflictSelects==='function')renderConflictSelects();}
+    if(name==='subsrec')renderSubsRec();
+    if(name==='subspay'){initDates();renderPayCalc();}
+    if(name==='admin')renderAdminPanel();
+    if(name==='manage'){if(typeof renderManage==='function')renderManage();}
+  };
+
+  /* ─ Also pre-load default admin config if none exists ─ */
+  if(!loadAdm().length){
+    var defaults=[
+      {id:1,title:'校長',name:'',reduce:0,extraRate:540},
+      {id:2,title:'教務主任',name:'',reduce:6,extraRate:540},
+      {id:3,title:'訓導主任',name:'',reduce:6,extraRate:540},
+      {id:4,title:'總務主任',name:'',reduce:6,extraRate:540},
+      {id:5,title:'教務組長',name:'',reduce:4,extraRate:540},
+      {id:6,title:'訓導組長',name:'',reduce:4,extraRate:540},
+    ];
+    saveAdm(defaults);
+  }
 })();
 
 /* ── LINE 推播 ── */
