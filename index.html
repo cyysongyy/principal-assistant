@@ -298,14 +298,20 @@ nav button .i{display:block;font-size:20px}
       <button class="btn" onclick="saveGhToken()" style="margin-top:10px">儲存</button>
       <div id="gh-token-st" style="font-size:12px;color:var(--g400);margin-top:5px"></div>
     </div>
-    <div class="set"><h3>☁️ 後端同步</h3>
-      <p style="font-size:12px;color:var(--g600);margin-bottom:10px;line-height:1.6">
-        將 API 金鑰、功課表、調課記錄、行政減課設定同步到 Firebase 雲端，換裝置後一鍵還原。<br>
-        <span style="color:#f59e0b;font-weight:600">⚠ 注意：API Key 等設定會上傳到你的 Firebase 帳號（young-app-library），請確認只在自己信任的環境使用。</span>
+    <div class="set"><h3>☁️ 後端同步（Google Apps Script）</h3>
+      <p style="font-size:12px;color:var(--g600);margin-bottom:8px;line-height:1.6">
+        將 API 金鑰、功課表、調課記錄、行政減課設定備份到 Google Apps Script，換裝置後一鍵還原。
       </p>
+      <label style="font-size:12px;color:var(--g600)">GAS Web App 網址</label>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <input type="text" id="gas-sync-url" placeholder="https://script.google.com/macros/s/…/exec" style="flex:1;font-size:12px" autocomplete="off">
+        <button class="btn" onclick="saveGasSyncUrl()" style="white-space:nowrap">儲存</button>
+      </div>
+      <div id="gas-url-st" style="font-size:12px;color:var(--g400);margin-bottom:8px"></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" onclick="syncToCloud()" style="flex:1">⬆️ 備份到雲端</button>
         <button class="btn btn2" onclick="restoreFromCloud()" style="flex:1">⬇️ 從雲端還原</button>
+        <button class="btn btn2" onclick="testGasSync()" style="flex:1;font-size:12px">🔌 測試連線</button>
       </div>
       <div id="cloud-sync-st" style="font-size:12px;color:var(--g400);margin-top:8px"></div>
     </div>
@@ -1218,13 +1224,15 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');}
-function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();const ghst=$('gh-token-st');if(ghst)ghst.textContent=loadGhToken()?'✓ 已設定 Token':'尚未設定';}
+function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();const ghst=$('gh-token-st');if(ghst)ghst.textContent=loadGhToken()?'✓ 已設定 Token':'尚未設定';const gsu=document.getElementById('gas-sync-url');if(gsu){const v=localStorage.getItem('pa_gas_sync_url')||'';gsu.value=v;const st=document.getElementById('gas-url-st');if(st)st.innerHTML=v?'<span style="color:var(--ok)">✅ 已設定</span>':'';} }
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 
-/* ───────── 後端同步 ───────── */
-var SYNC_DOC='user_sync';
+/* ───────── 後端同步（GAS） ───────── */
+var GAS_SYNC_KEY='pa_gas_sync_url';
 var SYNC_KEYS=['pa_schedule','pa_admin_config','pa_sub_records','pa_gcal_cache','pa_gcal_url',
                'pa_line_url','pa_line_uid','pa_meet_folder'];
+
+function _getGasUrl(){return localStorage.getItem(GAS_SYNC_KEY)||'';}
 
 function _syncSt(msg,ok){
   var el=document.getElementById('cloud-sync-st');
@@ -1232,52 +1240,65 @@ function _syncSt(msg,ok){
   el.innerHTML='<span style="color:'+(ok===true?'var(--ok)':ok===false?'#ef4444':'var(--g400)')+'">'+msg+'</span>';
 }
 
+window.saveGasSyncUrl=function(){
+  var v=(document.getElementById('gas-sync-url')||{}).value||'';
+  v=v.trim();
+  if(!v){alert('請貼上 GAS Web App 網址');return;}
+  localStorage.setItem(GAS_SYNC_KEY,v);
+  var st=document.getElementById('gas-url-st');
+  if(st)st.innerHTML='<span style="color:var(--ok)">✅ 已儲存</span>';
+};
+
+window.testGasSync=function(){
+  var url=_getGasUrl();
+  if(!url){_syncSt('⚠️ 請先儲存 GAS 網址',false);return;}
+  _syncSt('🔌 測試中…');
+  fetch(url+'?action=ping',{method:'GET'})
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(j.ok)_syncSt('✅ 連線正常（GAS 回應 OK）',true);
+      else _syncSt('⚠️ GAS 回應異常：'+JSON.stringify(j),false);
+    })
+    .catch(function(e){_syncSt('❌ 連線失敗：'+e.message,false);});
+};
+
 window.syncToCloud=function(){
-  if(!_fbRD){_syncSt('⚠️ Firebase 未連線',false);return;}
+  var url=_getGasUrl();
+  if(!url){_syncSt('⚠️ 請先填入並儲存 GAS 網址',false);return;}
   _syncSt('⬆️ 備份中…');
   var payload={updatedAt:Date.now(),device:navigator.userAgent.slice(0,80)};
-  // settings (API keys + prefs)
   payload.pa_set=JSON.stringify(S);
-  // other localStorage keys
-  SYNC_KEYS.forEach(function(k){
-    var v=localStorage.getItem(k);
-    if(v!=null)payload[k]=v;
-  });
-  _fbRD.collection('pa_config').doc(SYNC_DOC).set(payload,{merge:false})
-    .then(function(){
-      var ts=new Date().toLocaleString('zh-TW');
-      _syncSt('✅ 備份成功 '+ts,true);
-    })
-    .catch(function(e){_syncSt('❌ 備份失敗：'+e.message,false);});
+  SYNC_KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!=null)payload[k]=v;});
+  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'save',payload:payload})})
+  .then(function(r){return r.json();})
+  .then(function(j){
+    if(!j.ok)throw new Error(j.error||'未知錯誤');
+    _syncSt('✅ 備份成功 '+new Date().toLocaleString('zh-TW'),true);
+  })
+  .catch(function(e){_syncSt('❌ 備份失敗：'+e.message,false);});
 };
 
 window.restoreFromCloud=function(){
-  if(!_fbRD){_syncSt('⚠️ Firebase 未連線',false);return;}
+  var url=_getGasUrl();
+  if(!url){_syncSt('⚠️ 請先填入並儲存 GAS 網址',false);return;}
   if(!confirm('確定從雲端還原？本機設定（API Key、功課表、調課記錄等）將被覆蓋。'))return;
   _syncSt('⬇️ 還原中…');
-  _fbRD.collection('pa_config').doc(SYNC_DOC).get()
-    .then(function(doc){
-      if(!doc.exists){_syncSt('⚠️ 雲端尚無備份資料',false);return;}
-      var d=doc.data();
-      // restore settings
-      if(d.pa_set){
-        try{
-          var parsed=JSON.parse(d.pa_set);
-          Object.assign(S,parsed);
-          saveS();
-        }catch(e){}
-      }
-      // restore other keys
-      SYNC_KEYS.forEach(function(k){
-        if(d[k]!=null)localStorage.setItem(k,d[k]);
-      });
-      var ts=d.updatedAt?new Date(d.updatedAt).toLocaleString('zh-TW'):'未知';
-      _syncSt('✅ 還原成功（備份時間：'+ts+'）',true);
-      // refresh UI
-      loadSet();
-      if(typeof renderKeys==='function')renderKeys();
-    })
-    .catch(function(e){_syncSt('❌ 還原失敗：'+e.message,false);});
+  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},
+    body:JSON.stringify({action:'load'})})
+  .then(function(r){return r.json();})
+  .then(function(j){
+    if(!j.ok)throw new Error(j.error||'未知錯誤');
+    if(!j.data){_syncSt('⚠️ 雲端尚無備份資料',false);return;}
+    var d=j.data;
+    if(d.pa_set){try{Object.assign(S,JSON.parse(d.pa_set));saveS();}catch(e){}}
+    SYNC_KEYS.forEach(function(k){if(d[k]!=null)localStorage.setItem(k,d[k]);});
+    var ts=j.ts?new Date(j.ts).toLocaleString('zh-TW'):'未知';
+    _syncSt('✅ 還原成功（備份時間：'+ts+'）',true);
+    loadSet();
+    if(typeof renderKeys==='function')renderKeys();
+  })
+  .catch(function(e){_syncSt('❌ 還原失敗：'+e.message,false);});
 };
 
 /* ───────── init ───────── */
