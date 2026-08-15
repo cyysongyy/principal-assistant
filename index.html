@@ -256,7 +256,7 @@ nav button .i{display:block;font-size:20px}
       <input type="text" id="newkey" placeholder="貼上任何 API Key" autocomplete="off" style="flex:1"></div>
       <button class="btn" onclick="addKey()">＋ 加入金鑰（自動識別）</button>
       <div id="klist" style="margin-top:6px"></div>
-      <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。呼叫順序 Gemini → Claude → OpenAI，失敗自動換下一家。模型名（2026-07 預設）可在各列直接修改。</div>
+      <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。呼叫順序 Gemini → Claude → OpenAI，失敗自動換下一家。模型名（2026-07 預設）可在各列直接修改。與「Ybot」共用同一個網域，貼過一次兩邊都能用。</div>
     </div>
     <div class="set"><h3>🏫 校務系統連接</h3>
       <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
@@ -671,10 +671,28 @@ Young 目前的 GitHub 生態（cyysongyy 帳號）：gait（步態平衡）、5
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
 /* ───────── 狀態與儲存 ───────── */
-const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false};
-try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-2.5-flash';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
+const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false};
+try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-flash-latest';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
-(function fixModels(){const def={gmodel:'gemini-2.5-flash',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
+/* 與同一個 cyysongyy.github.io origin 底下的 Ybot 共用 AI Key：
+   localStorage 以 origin 為單位、不分路徑，兩個 App 其實共用同一份儲存空間。
+   這裡撿一份共用快照，貼過的欄位就撿來用，已經自己填過的不覆蓋。 */
+const SHARED_AI_KEY='shared_ai_keys_v1';
+function loadSharedAiKeys(){try{return JSON.parse(localStorage.getItem(SHARED_AI_KEY))||{};}catch(e){return{};}}
+function hydrateSharedAiKeys(){
+ const shared=loadSharedAiKeys();
+ const map={gkey:'gemini',okey:'openai',nvkey:'nvidia',akey:'claude'};
+ for(const f in map){if(!S[f]&&shared[map[f]])S[f]=shared[map[f]];}
+}
+function pushSharedAiKeys(){
+ const shared=loadSharedAiKeys();
+ const map={gkey:'gemini',okey:'openai',nvkey:'nvidia',akey:'claude'};
+ for(const f in map){if(S[f])shared[map[f]]=S[f];}
+ shared.updatedAt=new Date().toISOString();
+ localStorage.setItem(SHARED_AI_KEY,JSON.stringify(shared));
+}
+hydrateSharedAiKeys();
+(function fixModels(){const def={gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5'};let fixed=false;
  for(const f in def){const v=(S[f]||'').trim();
    if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)||(f==='gmodel'&&!v.startsWith('gemini-'))||(f==='omodel'&&!v.startsWith('gpt-'))||(f==='amodel'&&!v.startsWith('claude-'))){S[f]=def[f];fixed=true;}}
  if(fixed)localStorage.setItem('pa_set',JSON.stringify(S));})();
@@ -1207,7 +1225,7 @@ async function callNVIDIA(){
 /* ───────── 設定 ───────── */
 const PROVROWS=[['gkey','gmodel','Gemini'],['akey','amodel','Claude'],['okey','omodel','OpenAI'],['nvkey','nvmodel','NVIDIA']];
 function detectKey(k){if(/^AIza/.test(k)||/^AQ/.test(k))return['gkey','gmodel','Gemini'];if(/^sk-ant-/.test(k))return['akey','amodel','Claude'];if(/^nvapi-/.test(k))return['nvkey','nvmodel','NVIDIA'];if(/^sk-/.test(k))return['okey','omodel','OpenAI'];return null;}
-function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));}
+function saveS(){localStorage.setItem('pa_set',JSON.stringify(S));pushSharedAiKeys();}
 function addKey(){const k=$('newkey').value.trim();if(!k)return;
  const M={g:['gkey','gmodel','Gemini'],a:['akey','amodel','Claude'],o:['okey','omodel','OpenAI'],n:['nvkey','nvmodel','NVIDIA']};
  const d=M[$('provsel').value]||detectKey(k);
@@ -2310,7 +2328,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
   function providers(){
     var s=settings(), list=[];
-    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-2.5-flash'});
+    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'});
     if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
     if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
     return list;
@@ -2703,7 +2721,7 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
   function providers(){
     var s=settings(), list=[];
-    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-2.5-flash'});
+    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'});
     if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
     if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
     return list;
