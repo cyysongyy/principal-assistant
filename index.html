@@ -14,6 +14,9 @@ min-height:100dvh;display:flex;flex-direction:column;max-width:720px;margin:0 au
 header{position:sticky;top:0;z-index:10;background:var(--cream);color:var(--ink);padding:20px 18px 14px;display:flex;flex-direction:row-reverse;align-items:flex-start;gap:12px;box-shadow:none}
 header h1{font-size:28px;flex:1;font-weight:800;letter-spacing:.5px}
 header .sub{font-size:12px;opacity:.7;font-weight:400;margin-top:4px;color:var(--inkmute)}
+.hdr-right{display:flex;flex-direction:column;align-items:center;gap:3px}
+.hdr-date{font-size:10.5px;color:var(--inkmute);text-align:center;line-height:1.4;white-space:nowrap}
+.hdr-date .g{font-weight:700;color:var(--ink)}
 main{flex:1;overflow-y:auto;padding:14px;padding-bottom:76px}
 .view{display:none}.view.active{display:block}
 /* 首頁情境卡 */
@@ -237,7 +240,7 @@ nav button .i{display:block;font-size:20px}
   </button>
   <div class="pl-err" id="pl-err"></div>
 </div>
-<header><span style="font-size:44px;line-height:1">🎓</span><h1>校長助理<div class="sub">你的 AI 幕僚長・疑難雜症一起想</div></h1></header>
+<header><div class="hdr-right"><span style="font-size:44px;line-height:1">🎓</span><div class="hdr-date" id="hdr-date"></div></div><h1>校長助理<div class="sub">你的 AI 幕僚長・疑難雜症一起想</div></h1></header>
 <main>
   <!-- 首頁 -->
   <div id="v-home" class="view active">
@@ -672,6 +675,53 @@ Young 目前的 GitHub 生態（cyysongyy 帳號）：gait（步態平衡）、5
  {id:'schedule',emo:'📚',t:'功課表',d:'節數統計、調課衝突、拍照輸入',f:[],p:null},
  {id:'free',emo:'💬',t:'自由諮詢',d:'任何校長疑難雜症，直接聊',f:[],p:null},
 ];
+/* ───────── 標頭日期（國曆＋農曆／節氣） ───────── */
+function dayCn(d){
+  var u=['日','一','二','三','四','五','六','七','八','九','十'];
+  if(d===10)return '初十';if(d===20)return '二十';if(d===30)return '三十';
+  if(d<10)return '初'+u[d];if(d<20)return '十'+u[d-10];return '廿'+u[d-20];
+}
+function julianDayUTC(y,m,d,h){
+  if(m<=2){y--;m+=12;}
+  var A=Math.floor(y/100),B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+(h||0)/24+B-1524.5;
+}
+function sunLongitude(jd){
+  var T=(jd-2451545.0)/36525;
+  var L0=280.46646+36000.76983*T+0.0003032*T*T;
+  var M=357.52911+35999.05029*T-0.0001537*T*T;
+  var Mr=M*Math.PI/180;
+  var C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(Mr)+(0.019993-0.000101*T)*Math.sin(2*Mr)+0.000289*Math.sin(3*Mr);
+  return (((L0+C)%360)+360)%360;
+}
+const TERM_NAMES=['小寒','大寒','立春','雨水','驚蟄','春分','清明','穀雨','立夏','小滿','芒種','夏至','小暑','大暑','立秋','處暑','白露','秋分','寒露','霜降','立冬','小雪','大雪','冬至'];
+function solarTermForDate(y,m,d){
+  var jd0=julianDayUTC(y,m,d,0)-8/24,jd1=jd0+1;
+  var lon0=sunLongitude(jd0),lon1=sunLongitude(jd1);
+  var span=lon1-lon0;if(span<0)span+=360;
+  for(var n=0;n<24;n++){
+    var target=(285+15*n)%360;
+    var diff=((target-lon0)%360+360)%360;
+    if(diff<span)return TERM_NAMES[n];
+  }
+  return null;
+}
+function renderHeaderDate(){
+  var el=document.getElementById('hdr-date');
+  if(!el)return;
+  var now=new Date(),y=now.getFullYear(),m=now.getMonth()+1,d=now.getDate();
+  var gStr=y+'/'+m+'/'+d;
+  var lStr='';
+  try{
+    var parts=new Intl.DateTimeFormat('zh-Hant-u-ca-chinese',{year:'numeric',month:'numeric',day:'numeric'}).formatToParts(now);
+    var lm=parts.find(p=>p.type==='month'),ld=parts.find(p=>p.type==='day');
+    if(lm&&ld)lStr=lm.value+dayCn(parseInt(ld.value,10));
+  }catch(e){}
+  var term=solarTermForDate(y,m,d);
+  if(term)lStr+='（'+term+'）';
+  el.innerHTML='<div class="g">'+gStr+'</div><div class="l">'+lStr+'</div>';
+}
+renderHeaderDate();
 /* ───────── 狀態與儲存 ───────── */
 const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false};
 try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-flash-latest';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
