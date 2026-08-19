@@ -781,7 +781,7 @@ function setFontScale(cls){
   document.querySelectorAll('#fs-row .fs-btn').forEach(b=>b.classList.toggle('on',b.dataset.fs===saved));
 })();
 /* ───────── 狀態與儲存 ───────── */
-const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false,providerOrder:['gemini','claude','openai']};
+const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false,providerOrder:['gemini','claude','openai','nvidia']};
 try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-flash-latest';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 /* 與同一個 cyysongyy.github.io origin 底下的 Ybot 共用 AI Key：
@@ -806,7 +806,7 @@ hydrateSharedAiKeys();
  for(const f in def){const v=(S[f]||'').trim();
    if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)||(f==='gmodel'&&!v.startsWith('gemini-'))||(f==='omodel'&&!v.startsWith('gpt-'))||(f==='amodel'&&!v.startsWith('claude-'))){S[f]=def[f];fixed=true;}}
  if(fixed)localStorage.setItem('pa_set',JSON.stringify(S));})();
-(function fixProviderOrder(){const all=['gemini','claude','openai'];const cur=Array.isArray(S.providerOrder)?S.providerOrder.filter(function(p){return all.indexOf(p)!==-1;}):[];
+(function fixProviderOrder(){const all=['gemini','claude','openai','nvidia'];const cur=Array.isArray(S.providerOrder)?S.providerOrder.filter(function(p){return all.indexOf(p)!==-1;}):[];
  all.forEach(function(p){if(cur.indexOf(p)===-1)cur.push(p);});
  S.providerOrder=cur;})();
 function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60)));}
@@ -1332,9 +1332,9 @@ async function callNVIDIA(){
   if(!res.ok)throw new Error(j.error?.message||res.status);
   return j.choices[0].message.content;
 }
- const FN={gemini:callGemini,claude:callClaude,openai:callOpenAI};
- const pvs=S.providerOrder.filter(function(t){return S[{gemini:'gkey',claude:'akey',openai:'okey'}[t]];}).map(function(t){return FN[t];});
- if(S.nvkey)pvs.push(callNVIDIA);
+ const FN={gemini:callGemini,claude:callClaude,openai:callOpenAI,nvidia:callNVIDIA};
+ const KF={gemini:'gkey',claude:'akey',openai:'okey',nvidia:'nvkey'};
+ const pvs=S.providerOrder.filter(function(t){return S[KF[t]];}).map(function(t){return FN[t];});
  let last;for(const p of pvs){try{return await p();}catch(e){last=e;}}
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
@@ -1357,8 +1357,8 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
 }).join('');renderProvOrder();}
-var PROV_NAME={gemini:'Gemini',claude:'Claude',openai:'OpenAI'};
-var PROV_KEYFIELD={gemini:'gkey',claude:'akey',openai:'okey'};
+var PROV_NAME={gemini:'Gemini',claude:'Claude',openai:'OpenAI',nvidia:'NVIDIA'};
+var PROV_KEYFIELD={gemini:'gkey',claude:'akey',openai:'okey',nvidia:'nvkey'};
 function renderProvOrder(){var el=$('provOrder');if(!el)return;
  el.innerHTML=S.providerOrder.map(function(t,i){
    var has=!!S[PROV_KEYFIELD[t]];
@@ -2460,8 +2460,9 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
     var s=settings();
     var all={gemini:{t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'},
              claude:{t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'},
-             openai:{t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'}};
-    var order=Array.isArray(s.providerOrder)&&s.providerOrder.length?s.providerOrder:['gemini','claude','openai'];
+             openai:{t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'},
+             nvidia:{t:'nvidia',key:s.nvkey,model:s.nvmodel||'meta/llama-3.1-70b-instruct'}};
+    var order=Array.isArray(s.providerOrder)&&s.providerOrder.length?s.providerOrder:['gemini','claude','openai','nvidia'];
     return order.filter(function(t){return all[t]&&all[t].key;}).map(function(t){return all[t];});
   }
   var GEMINI_SAFETY=[
@@ -2490,6 +2491,13 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
       var choice=d.choices&&d.choices[0];
       var text=(choice&&choice.message&&choice.message.content)||'';
       if(choice&&choice.finish_reason&&choice.finish_reason!=='stop'&&choice.finish_reason!=='length')throw new Error('OpenAI 回應被中斷（'+choice.finish_reason+'）');
+      return text;
+    });
+    if(pv.t==='nvidia') return fetch('https://integrate.api.nvidia.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+pv.key},body:JSON.stringify({model:pv.model,messages:[{role:'system',content:sys},{role:'user',content:user}],temperature:0.3,max_tokens:3000})}).then(r=>r.json()).then(d=>{
+      if(d.error)throw new Error(d.error.message);
+      var choice=d.choices&&d.choices[0];
+      var text=(choice&&choice.message&&choice.message.content)||'';
+      if(choice&&choice.finish_reason&&choice.finish_reason!=='stop'&&choice.finish_reason!=='length')throw new Error('NVIDIA 回應被中斷（'+choice.finish_reason+'）');
       return text;
     });
     return Promise.reject(new Error('無供應商'));
