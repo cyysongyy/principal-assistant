@@ -285,7 +285,9 @@ body.fs-xl{zoom:1.45}
       <input type="text" id="newkey" placeholder="貼上任何 API Key" autocomplete="off" style="flex:1"></div>
       <button class="btn" onclick="addKey()">＋ 加入金鑰（自動識別）</button>
       <div id="klist" style="margin-top:6px"></div>
-      <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。呼叫順序 Gemini → Claude → OpenAI，失敗自動換下一家。模型名（2026-07 預設）可在各列直接修改。與「Ybot」共用同一個網域，貼過一次兩邊都能用。</div>
+      <div class="hint">免費金鑰：<a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>（Gemini）。模型名（2026-07 預設）可在各列直接修改。與「Ybot」共用同一個網域，貼過一次兩邊都能用。</div>
+      <label style="margin-top:10px">呼叫順序（失敗或被安全過濾中斷會自動換下一家）</label>
+      <div id="provOrder" style="margin-top:4px"></div>
     </div>
     <div class="set"><h3>🏫 校務系統連接</h3>
       <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="useSchool" style="width:18px;height:18px" onchange="S.useSchool=this.checked;saveS()"> 對話時附上校務系統資料給 AI 參考</label>
@@ -779,7 +781,7 @@ function setFontScale(cls){
   document.querySelectorAll('#fs-row .fs-btn').forEach(b=>b.classList.toggle('on',b.dataset.fs===saved));
 })();
 /* ───────── 狀態與儲存 ───────── */
-const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false};
+const S={gkey:'',okey:'',akey:'',nvkey:'',gmodel:'gemini-flash-latest',omodel:'gpt-4o-mini',amodel:'claude-sonnet-5',nvmodel:'meta/llama-3.1-70b-instruct',useSchool:false,providerOrder:['gemini','claude','openai']};
 try{const _ls=JSON.parse(localStorage.getItem('pa_set')||'{}');Object.assign(S,_ls);S.gmodel='gemini-flash-latest';S.omodel='gpt-4o-mini';S.amodel='claude-sonnet-5';}catch(e){}
 let hist=[];try{hist=JSON.parse(localStorage.getItem('pa_hist')||'[]');}catch(e){}
 /* 與同一個 cyysongyy.github.io origin 底下的 Ybot 共用 AI Key：
@@ -804,6 +806,9 @@ hydrateSharedAiKeys();
  for(const f in def){const v=(S[f]||'').trim();
    if(!v||v.length>48||/^(AIza|AQ|sk-)/i.test(v)||/\s/.test(v)||!/^[A-Za-z0-9._-]+$/.test(v)||(f==='gmodel'&&!v.startsWith('gemini-'))||(f==='omodel'&&!v.startsWith('gpt-'))||(f==='amodel'&&!v.startsWith('claude-'))){S[f]=def[f];fixed=true;}}
  if(fixed)localStorage.setItem('pa_set',JSON.stringify(S));})();
+(function fixProviderOrder(){const all=['gemini','claude','openai'];const cur=Array.isArray(S.providerOrder)?S.providerOrder.filter(function(p){return all.indexOf(p)!==-1;}):[];
+ all.forEach(function(p){if(cur.indexOf(p)===-1)cur.push(p);});
+ S.providerOrder=cur;})();
 function saveHist(){localStorage.setItem('pa_hist',JSON.stringify(hist.slice(-60)));}
 const SYS=`你是台灣中小學校長的資深幕僚長（主任祕書等級），熟悉台灣教育現場、教育部與縣市教育局處行政慣例、公文程式與校園法規框架。一律使用繁體中文（台灣用語）回覆。原則：1) 給可直接使用的成品，不要只給建議清單，除非使用者只要建議。2) 涉及法規、通報、人事、採購等有法律效果的內容，結尾標註「⚠️ 請以現行法規與主管機關函釋為準」並點名該查什麼。3) 不編造數據、名字與法條號；不確定就寫【待查證】。4) 語氣專業溫暖，符合教育工作者身分。`;
 /* ───────── 畫面 ───────── */
@@ -1327,7 +1332,9 @@ async function callNVIDIA(){
   if(!res.ok)throw new Error(j.error?.message||res.status);
   return j.choices[0].message.content;
 }
- const pvs=[];if(S.gkey)pvs.push(callGemini);if(S.akey)pvs.push(callClaude);if(S.okey)pvs.push(callOpenAI);if(S.nvkey)pvs.push(callNVIDIA);
+ const FN={gemini:callGemini,claude:callClaude,openai:callOpenAI};
+ const pvs=S.providerOrder.filter(function(t){return S[{gemini:'gkey',claude:'akey',openai:'okey'}[t]];}).map(function(t){return FN[t];});
+ if(S.nvkey)pvs.push(callNVIDIA);
  let last;for(const p of pvs){try{return await p();}catch(e){last=e;}}
  throw last||new Error('未設定 API Key');}
 /* ───────── 設定 ───────── */
@@ -1349,7 +1356,22 @@ function renderKeys(){$('klist').innerHTML=PROVROWS.map(function(r){var kf=r[0],
  return '<label>'+nm+' <span class="pill ok">已設定</span> <span style="font-weight:400;color:var(--g400)">'+mask+'</span></label>'
  +'<div style="display:flex;gap:8px;align-items:center"><span style="font-size:12px;color:var(--g600);white-space:nowrap">模型名</span><input type="text" value="'+S[mf]+'" onchange="setModel(\''+mf+'\',this)" title="模型名（不是金鑰）">'
  +'<button onclick="delKey(\''+kf+'\')" style="border:1px solid var(--g200);background:#fff;border-radius:10px;padding:0 12px;cursor:pointer">移除</button></div>';
-}).join('');}
+}).join('');renderProvOrder();}
+var PROV_NAME={gemini:'Gemini',claude:'Claude',openai:'OpenAI'};
+var PROV_KEYFIELD={gemini:'gkey',claude:'akey',openai:'okey'};
+function renderProvOrder(){var el=$('provOrder');if(!el)return;
+ el.innerHTML=S.providerOrder.map(function(t,i){
+   var has=!!S[PROV_KEYFIELD[t]];
+   return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;margin-bottom:4px;border:1px solid var(--g200);border-radius:10px;background:'+(has?'#fff':'var(--g50)')+'">'
+     +'<span style="font-weight:700;color:var(--g600);width:18px">'+(i+1)+'</span>'
+     +'<span style="flex:1;'+(has?'':'color:var(--g400)')+'">'+PROV_NAME[t]+(has?'':'（未設定金鑰）')+'</span>'
+     +'<button onclick="moveProv('+i+',-1)" '+(i===0?'disabled':'')+' style="border:1px solid var(--g200);background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer">↑</button>'
+     +'<button onclick="moveProv('+i+',1)" '+(i===S.providerOrder.length-1?'disabled':'')+' style="border:1px solid var(--g200);background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer">↓</button>'
+     +'</div>';
+ }).join('');}
+function moveProv(i,dir){var j=i+dir;if(j<0||j>=S.providerOrder.length)return;
+ var tmp=S.providerOrder[i];S.providerOrder[i]=S.providerOrder[j];S.providerOrder[j]=tmp;
+ saveS();renderProvOrder();}
 function loadSet(){renderKeys();$('useSchool').checked=!!S.useSchool;const gu=localStorage.getItem(GCAL_KEY)||'';if($('gcal-url'))$('gcal-url').value=gu;const mf=localStorage.getItem(MF_KEY)||'';if($('meet-folder-url'))$('meet-folder-url').value=mf;loadLineSet();const ghst=$('gh-token-st');if(ghst)ghst.textContent=loadGhToken()?'✓ 已設定 Token':'尚未設定';const gsu=document.getElementById('gas-sync-url');if(gsu){const v=localStorage.getItem('pa_gas_sync_url')||'';gsu.value=v;const st=document.getElementById('gas-url-st');if(st)st.innerHTML=v?'<span style="color:var(--ok)">✅ 已設定</span>':'';} }
 function clearHist(){if(confirm('確定清除全部對話？此動作無法復原')){hist=[];saveHist();renderMsgs();}}
 
@@ -2435,11 +2457,12 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
 
   function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
   function providers(){
-    var s=settings(), list=[];
-    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'});
-    if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
-    if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
-    return list;
+    var s=settings();
+    var all={gemini:{t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'},
+             claude:{t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'},
+             openai:{t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'}};
+    var order=Array.isArray(s.providerOrder)&&s.providerOrder.length?s.providerOrder:['gemini','claude','openai'];
+    return order.filter(function(t){return all[t]&&all[t].key;}).map(function(t){return all[t];});
   }
   var GEMINI_SAFETY=[
     {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_ONLY_HIGH'},
@@ -2852,11 +2875,12 @@ $('inp').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isCo
   /* ==== 直接呼叫 AI 供應商（繞過人設）==== */
   function settings(){ try{ return JSON.parse(localStorage.getItem('pa_set')||'{}'); }catch(e){ return {}; } }
   function providers(){
-    var s=settings(), list=[];
-    if(s.gkey) list.push({t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'});
-    if(s.akey) list.push({t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'});
-    if(s.okey) list.push({t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'});
-    return list;
+    var s=settings();
+    var all={gemini:{t:'gemini',key:s.gkey,model:s.gmodel||'gemini-flash-latest'},
+             claude:{t:'claude',key:s.akey,model:s.amodel||'claude-sonnet-5'},
+             openai:{t:'openai',key:s.okey,model:s.omodel||'gpt-4o-mini'}};
+    var order=Array.isArray(s.providerOrder)&&s.providerOrder.length?s.providerOrder:['gemini','claude','openai'];
+    return order.filter(function(t){return all[t]&&all[t].key;}).map(function(t){return all[t];});
   }
   function callProvider(pv, text){
     var user='內容：\n'+text;
