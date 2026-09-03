@@ -160,6 +160,17 @@ body.fs-xl{zoom:1.45}
 .sc-slot:last-child{border-bottom:none}
 .sc-slot-period{min-width:32px;color:var(--g400);font-size:10px}
 .sc-slot-info{flex:1}
+/* 視覺化課表矩陣 / 全域搜尋 / 連調試算（來自 115classschedule） */
+.sch-matrix{width:100%;border-collapse:collapse;font-size:11px;background:var(--cream2);border-radius:10px;overflow:hidden;border:1px solid var(--g200)}
+.sch-matrix th{background:var(--accent);color:#fff;padding:5px 3px;text-align:center;font-size:10px;font-weight:700}
+.sch-matrix td{padding:5px 2px;border:1px solid var(--g100);text-align:center;cursor:pointer;white-space:nowrap}
+.sch-matrix td.mx-free{background:#f0fdf4;color:#166534}
+.sch-matrix td.mx-busy{background:var(--pril);color:var(--prid);font-weight:700}
+.sch-matrix td:active{opacity:.7}
+.sch-quick-tags{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 0}
+.sch-quick-tag{padding:4px 10px;font-size:11px;background:var(--g100);color:var(--g700);border-radius:12px;border:none;cursor:pointer;font-weight:600}
+.sch-swap-ok{background:#f0fdf4;border:1px solid #bbf7d0;padding:10px;border-radius:8px;margin-top:8px;font-size:12px;line-height:1.6}
+.sch-swap-err{background:#fff1f2;border:1px solid #fecdd3;padding:10px;border-radius:8px;margin-top:8px;font-size:12px;line-height:1.6}
 /* 語音按鈕 */
 .mic-wrap{position:relative;display:flex;align-items:flex-end;gap:6px}
 .mic-wrap textarea{flex:1}
@@ -375,6 +386,12 @@ body.fs-xl{zoom:1.45}
     <!-- 調課衝突 -->
     <div id="sch-conflict" class="sch-panel">
       <div class="fbox" style="margin-bottom:10px">
+        <h2 style="font-size:15px;margin-bottom:8px">🔍 全域搜尋（老師／班級／科目）</h2>
+        <input type="text" id="sch-global-search" placeholder="輸入老師、班級（如：三甲班）或科目（如：體育）…" style="width:100%;padding:9px;border:1px solid var(--g200);border-radius:10px;font-size:14px;background:var(--g50)" oninput="schGlobalSearch()">
+        <div class="sch-quick-tags" id="sch-quick-tags"></div>
+        <div id="sch-global-result" style="margin-top:8px"></div>
+      </div>
+      <div class="fbox" style="margin-bottom:10px">
         <h2 style="font-size:15px;margin-bottom:10px">⚠️ 調課衝突查詢</h2>
         <label>要調走的老師</label>
         <select id="sc-teacher-a" style="width:100%;padding:9px;border:1px solid var(--g200);border-radius:10px;font-size:14px;background:var(--g50)">
@@ -396,6 +413,41 @@ body.fs-xl{zoom:1.45}
         <button class="btn" onclick="checkConflict()" style="margin-top:12px">查詢空堂老師</button>
       </div>
       <div id="sc-conflict-result"></div>
+      <div class="fbox" style="margin-top:10px">
+        <h2 style="font-size:15px;margin-bottom:10px">🔀 多節／區間連調可行性試算</h2>
+        <label>發起教師與連調時段</label>
+        <select id="mw-teacher-a" onchange="schAutoFilterSwap()" style="width:100%;padding:9px;border:1px solid var(--g200);border-radius:10px;font-size:14px;background:var(--g50)"></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px">
+          <select id="mw-day-a" onchange="schAutoFilterSwap()" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+            <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+            <option value="4">星期四</option><option value="5">星期五</option>
+          </select>
+          <select id="mw-period-a" onchange="schAutoFilterSwap()" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+            <option value="1">起：第1節</option><option value="2">起：第2節</option><option value="3">起：第3節</option>
+            <option value="4">起：第4節</option><option value="5">起：第5節</option><option value="6">起：第6節</option><option value="7">起：第7節</option>
+          </select>
+          <select id="mw-count-a" onchange="schAutoFilterSwap()" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+            <option value="1">連續1節</option><option value="2">連續2節</option><option value="3">連續3節</option><option value="4">連續4節</option>
+          </select>
+        </div>
+        <label style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <span>目標對調教師與目標時段</span>
+          <button type="button" onclick="schAutoFilterSwap()" style="font-size:11px;padding:4px 8px;border:none;border-radius:8px;background:#0284c7;color:#fff;cursor:pointer">⚡ 重新篩選</button>
+        </label>
+        <select id="mw-teacher-b" style="width:100%;padding:9px;border:1px solid var(--g200);border-radius:10px;font-size:14px;background:var(--g50)"></select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+          <select id="mw-day-b" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+            <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+            <option value="4">星期四</option><option value="5">星期五</option>
+          </select>
+          <select id="mw-period-b" style="padding:8px;border:1px solid var(--g200);border-radius:8px;font-size:13px;background:var(--g50)">
+            <option value="1">起：第1節</option><option value="2">起：第2節</option><option value="3">起：第3節</option>
+            <option value="4">起：第4節</option><option value="5">起：第5節</option><option value="6">起：第6節</option><option value="7">起：第7節</option>
+          </select>
+        </div>
+        <button onclick="schCheckMultiSwap()" style="width:100%;margin-top:10px;padding:10px;background:var(--ok);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">開始評估連調可行性</button>
+        <div id="mw-result"></div>
+      </div>
     </div>
     <!-- 調課記錄 -->
     <div id="sch-subsrec" class="sch-panel">
@@ -483,6 +535,19 @@ body.fs-xl{zoom:1.45}
 
     <!-- 管理 -->
     <div id="sch-manage" class="sch-panel">
+      <div class="sch-section" style="margin-bottom:14px">
+        <div class="sch-section-title">🗺️ 視覺化課表矩陣（點格子可直接改課程）</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <select id="mx-teacher" onchange="schRenderMatrix()" style="flex:1;padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:12px;background:var(--g50)">
+            <option value="ALL">全校教師</option>
+          </select>
+          <select id="mx-day" onchange="schRenderMatrix()" style="padding:7px;border:1px solid var(--g200);border-radius:8px;font-size:12px;background:var(--g50)">
+            <option value="1">星期一</option><option value="2">星期二</option><option value="3">星期三</option>
+            <option value="4">星期四</option><option value="5">星期五</option>
+          </select>
+        </div>
+        <div id="sch-matrix-wrap" style="overflow-x:auto"></div>
+      </div>
       <div style="display:flex;gap:6px;margin-bottom:8px">
         <input id="sch-search" type="text" placeholder="🔍 搜尋老師／班級／科目…" style="flex:1;padding:8px 10px;border:1px solid var(--g200);border-radius:10px;font-size:13px" oninput="renderManage()">
         <select id="sch-filter-day" style="padding:8px;border:1px solid var(--g200);border-radius:10px;font-size:13px;background:var(--g50)" onchange="renderManage()">
@@ -1560,7 +1625,7 @@ window.startVoice=function(targetId, btn){
     var d=loadSch();
     if(!d||!d.rows){
       // Pre-load school schedule
-      var preloaded={"rows": [{"class": "一甲班", "day": 1, "period": 1, "teacher": "呂美純", "subject": "健康"}, {"class": "四甲班", "day": 1, "period": 1, "teacher": "陳永芝", "subject": "健康"}, {"class": "六甲班", "day": 1, "period": 1, "teacher": "王怡文", "subject": "數學"}, {"class": "一甲班", "day": 1, "period": 1, "teacher": "黃于玲", "subject": "鄉土"}, {"class": "三甲班", "day": 1, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "五甲班", "day": 1, "period": 1, "teacher": "陳英曉", "subject": "自然"}, {"class": "四甲班", "day": 1, "period": 2, "teacher": "陳永芝", "subject": "綜合"}, {"class": "六甲班", "day": 1, "period": 2, "teacher": "王怡文", "subject": "國語"}, {"class": "三甲班", "day": 1, "period": 2, "teacher": "王瑞明", "subject": "國語"}, {"class": "二甲班", "day": 1, "period": 2, "teacher": "蔡幸華", "subject": "數學"}, {"class": "一甲班", "day": 1, "period": 2, "teacher": "楊凱棋", "subject": "數學"}, {"class": "五甲班", "day": 1, "period": 2, "teacher": "陳英曉", "subject": "自然"}, {"class": "三甲班", "day": 1, "period": 3, "teacher": "呂美純", "subject": "體育"}, {"class": "二甲班", "day": 1, "period": 3, "teacher": "陳永芝", "subject": "體育"}, {"class": "五甲班", "day": 1, "period": 3, "teacher": "羅昭倫", "subject": "綜合"}, {"class": "六甲班", "day": 1, "period": 3, "teacher": "林瑞芳", "subject": "自然"}, {"class": "一甲班", "day": 1, "period": 3, "teacher": "楊凱棋", "subject": "國語"}, {"class": "四甲班", "day": 1, "period": 3, "teacher": "黃雅玲", "subject": "社會"}, {"class": "四甲班", "day": 1, "period": 4, "teacher": "呂美純", "subject": "自然"}, {"class": "三甲班", "day": 1, "period": 4, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 1, "period": 4, "teacher": "羅昭倫", "subject": "社會"}, {"class": "六甲班", "day": 1, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "二甲班", "day": 1, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "一甲班", "day": 1, "period": 4, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 2, "period": 1, "teacher": "呂美純", "subject": "生活"}, {"class": "六甲班", "day": 2, "period": 1, "teacher": "陳永芝", "subject": "社會"}, {"class": "五甲班", "day": 2, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "四甲班", "day": 2, "period": 1, "teacher": "黃于玲", "subject": "數學"}, {"class": "三甲班", "day": 2, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "一甲班", "day": 2, "period": 1, "teacher": "楊凱棋", "subject": "數學"}, {"class": "二甲班", "day": 2, "period": 2, "teacher": "呂美純", "subject": "生活"}, {"class": "三甲班", "day": 2, "period": 2, "teacher": "陳永芝", "subject": "英語"}, {"class": "一甲班", "day": 2, "period": 2, "teacher": "羅昭倫", "subject": "體育"}, {"class": "六甲班", "day": 2, "period": 2, "teacher": "王怡文", "subject": "數學"}, {"class": "五甲班", "day": 2, "period": 2, "teacher": "吳惠雅", "subject": "國語"}, {"class": "四甲班", "day": 2, "period": 2, "teacher": "黃于玲", "subject": "國語"}, {"class": "六甲班", "day": 2, "period": 3, "teacher": "王怡文", "subject": "彈性"}, {"class": "五甲班", "day": 2, "period": 3, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "四甲班", "day": 2, "period": 3, "teacher": "黃于玲", "subject": "彈性"}, {"class": "三甲班", "day": 2, "period": 3, "teacher": "王瑞明", "subject": "彈性"}, {"class": "二甲班", "day": 2, "period": 3, "teacher": "蔡幸華", "subject": "美勞"}, {"class": "一甲班", "day": 2, "period": 3, "teacher": "楊凱棋", "subject": "彈性"}, {"class": "一甲班", "day": 2, "period": 4, "teacher": "呂美純", "subject": "彈性"}, {"class": "五甲班", "day": 2, "period": 4, "teacher": "陳永芝", "subject": "英語"}, {"class": "三甲班", "day": 2, "period": 4, "teacher": "林瑞芳", "subject": "社會"}, {"class": "六甲班", "day": 2, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 2, "period": 4, "teacher": "黃于玲", "subject": "國語"}, {"class": "二甲班", "day": 2, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "一甲班", "day": 3, "period": 1, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "二甲班", "day": 3, "period": 1, "teacher": "呂美純", "subject": "生活"}, {"class": "六甲班", "day": 3, "period": 1, "teacher": "王怡文", "subject": "數學"}, {"class": "五甲班", "day": 3, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "三甲班", "day": 3, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "六甲班", "day": 3, "period": 2, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "二甲班", "day": 3, "period": 2, "teacher": "陳永芝", "subject": "體育"}, {"class": "一甲班", "day": 3, "period": 2, "teacher": "羅昭倫", "subject": "彈性"}, {"class": "六甲班", "day": 3, "period": 2, "teacher": "王怡文", "subject": "數學"}, {"class": "五甲班", "day": 3, "period": 2, "teacher": "吳惠雅", "subject": "國語"}, {"class": "三甲班", "day": 3, "period": 2, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 3, "period": 3, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "六甲班", "day": 3, "period": 3, "teacher": "陳永芝", "subject": "社會"}, {"class": "一甲班", "day": 3, "period": 3, "teacher": "羅昭倫", "subject": "體育"}, {"class": "三甲班", "day": 3, "period": 3, "teacher": "林瑞芳", "subject": "社會"}, {"class": "四甲班", "day": 3, "period": 3, "teacher": "黃于玲", "subject": "數學"}, {"class": "二甲班", "day": 3, "period": 3, "teacher": "蔡幸華", "subject": "數學"}, {"class": "四甲班", "day": 3, "period": 3, "teacher": "黃雅玲", "subject": "社會"}, {"class": "三甲班", "day": 3, "period": 4, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "六甲班", "day": 3, "period": 4, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 3, "period": 4, "teacher": "吳惠雅", "subject": "國語"}, {"class": "四甲班", "day": 3, "period": 4, "teacher": "黃于玲", "subject": "彈性"}, {"class": "二甲班", "day": 3, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "一甲班", "day": 3, "period": 4, "teacher": "楊凱棋", "subject": "國語"}, {"class": "四甲班", "day": 3, "period": 4, "teacher": "黃雅玲", "subject": "社會"}, {"class": "六甲班", "day": 4, "period": 1, "teacher": "王怡文", "subject": "彈性"}, {"class": "五甲班", "day": 4, "period": 1, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "四甲班", "day": 4, "period": 1, "teacher": "黃于玲", "subject": "彈性"}, {"class": "三甲班", "day": 4, "period": 1, "teacher": "王瑞明", "subject": "彈性"}, {"class": "二甲班", "day": 4, "period": 1, "teacher": "蔡幸華", "subject": "彈性"}, {"class": "一甲班", "day": 4, "period": 1, "teacher": "楊凱棋", "subject": "國語"}, {"class": "四甲班", "day": 4, "period": 2, "teacher": "陳永芝", "subject": "英語"}, {"class": "二甲班", "day": 4, "period": 2, "teacher": "羅昭倫", "subject": "健康"}, {"class": "六甲班", "day": 4, "period": 2, "teacher": "王怡文", "subject": "國語"}, {"class": "五甲班", "day": 4, "period": 2, "teacher": "吳惠雅", "subject": "數學"}, {"class": "三甲班", "day": 4, "period": 2, "teacher": "王瑞明", "subject": "數學"}, {"class": "一甲班", "day": 4, "period": 2, "teacher": "楊凱棋", "subject": "數學"}, {"class": "六甲班", "day": 4, "period": 3, "teacher": "陳永芝", "subject": "英語"}, {"class": "五甲班", "day": 4, "period": 3, "teacher": "羅昭倫", "subject": "體育"}, {"class": "四甲班", "day": 4, "period": 3, "teacher": "黃于玲", "subject": "數學"}, {"class": "三甲班", "day": 4, "period": 3, "teacher": "王瑞明", "subject": "國語"}, {"class": "二甲班", "day": 4, "period": 3, "teacher": "蔡幸華", "subject": "數學"}, {"class": "一甲班", "day": 4, "period": 3, "teacher": "黃雅玲", "subject": "美勞"}, {"class": "六甲班", "day": 4, "period": 4, "teacher": "陳永芝", "subject": "綜合"}, {"class": "三甲班", "day": 4, "period": 4, "teacher": "羅昭倫", "subject": "自然"}, {"class": "四甲班", "day": 4, "period": 4, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "五甲班", "day": 4, "period": 4, "teacher": "吳惠雅", "subject": "國語"}, {"class": "二甲班", "day": 4, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "一甲班", "day": 4, "period": 4, "teacher": "黃雅玲", "subject": "美勞"}, {"class": "四甲班", "day": 4, "period": 5, "teacher": "呂美純", "subject": "自然"}, {"class": "五甲班", "day": 4, "period": 5, "teacher": "陳永芝", "subject": "英語"}, {"class": "一甲班", "day": 4, "period": 5, "teacher": "羅昭倫", "subject": "音樂"}, {"class": "六甲班", "day": 4, "period": 5, "teacher": "王怡文", "subject": "彈性"}, {"class": "三甲班", "day": 4, "period": 5, "teacher": "王瑞明", "subject": "國語"}, {"class": "二甲班", "day": 4, "period": 5, "teacher": "蔡幸華", "subject": "美勞"}, {"class": "四甲班", "day": 4, "period": 6, "teacher": "呂美純", "subject": "自然"}, {"class": "二甲班", "day": 4, "period": 6, "teacher": "羅昭倫", "subject": "音樂"}, {"class": "五甲班", "day": 4, "period": 6, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "六甲班", "day": 4, "period": 6, "teacher": "王怡文", "subject": "彈性"}, {"class": "三甲班", "day": 4, "period": 6, "teacher": "王瑞明", "subject": "資彈"}, {"class": "一甲班", "day": 4, "period": 6, "teacher": "楊凱棋", "subject": "生活"}, {"class": "六甲班", "day": 4, "period": 6, "teacher": "陳英曉", "subject": "體育"}, {"class": "四甲班", "day": 4, "period": 7, "teacher": "呂美純", "subject": "資彈"}, {"class": "二甲班", "day": 4, "period": 7, "teacher": "陳永芝", "subject": "彈性"}, {"class": "三甲班", "day": 4, "period": 7, "teacher": "羅昭倫", "subject": "自然"}, {"class": "五甲班", "day": 4, "period": 7, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "一甲班", "day": 4, "period": 7, "teacher": "楊凱棋", "subject": "生活"}, {"class": "二甲班", "day": 5, "period": 1, "teacher": "陳永芝", "subject": "彈性"}, {"class": "六甲班", "day": 5, "period": 1, "teacher": "林瑞芳", "subject": "自然"}, {"class": "五甲班", "day": 5, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "四甲班", "day": 5, "period": 1, "teacher": "黃于玲", "subject": "數學"}, {"class": "一甲班", "day": 5, "period": 1, "teacher": "楊凱棋", "subject": "數學"}, {"class": "三甲班", "day": 5, "period": 2, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 5, "period": 2, "teacher": "羅昭倫", "subject": "社會"}, {"class": "六甲班", "day": 5, "period": 2, "teacher": "林瑞芳", "subject": "自然"}, {"class": "四甲班", "day": 5, "period": 2, "teacher": "黃于玲", "subject": "國語"}, {"class": "三甲班", "day": 5, "period": 2, "teacher": "王瑞明", "subject": "國語"}, {"class": "二甲班", "day": 5, "period": 2, "teacher": "蔡幸華", "subject": "數學"}, {"class": "一甲班", "day": 5, "period": 2, "teacher": "楊凱棋", "subject": "生活"}, {"class": "四甲班", "day": 5, "period": 3, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 5, "period": 3, "teacher": "羅昭倫", "subject": "社會"}, {"class": "三甲班", "day": 5, "period": 3, "teacher": "林瑞芳", "subject": "社會"}, {"class": "六甲班", "day": 5, "period": 3, "teacher": "王怡文", "subject": "彈性六六甲 數學練    習"}, {"class": "五甲班", "day": 5, "period": 3, "teacher": "吳惠雅", "subject": "彈性烏克麗麗練    習"}, {"class": "四甲班", "day": 5, "period": 3, "teacher": "黃于玲", "subject": "彈性烏克麗麗練    習"}, {"class": "三甲班", "day": 5, "period": 3, "teacher": "王瑞明", "subject": "彈性烏克麗麗練    習"}, {"class": "一甲班", "day": 5, "period": 3, "teacher": "楊凱棋", "subject": "國語甲"}, {"class": "三甲班", "day": 5, "period": 4, "teacher": "羅昭倫", "subject": "自然"}, {"class": "六甲班", "day": 5, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "五甲班", "day": 5, "period": 4, "teacher": "吳惠雅", "subject": "國語"}, {"class": "四甲班", "day": 5, "period": 4, "teacher": "黃于玲", "subject": "國語"}, {"class": "二甲班", "day": 5, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "一甲班", "day": 5, "period": 4, "teacher": "楊凱棋", "subject": "國語"}], "updatedAt": 1753891200000, "source": "115教師總課表.docx"};
+      var preloaded={"rows": [{"class": "一甲班", "day": 1, "period": 1, "teacher": "呂美純", "subject": "健康"}, {"class": "二甲班", "day": 1, "period": 1, "teacher": "黃于玲", "subject": "鄉土"}, {"class": "三甲班", "day": 1, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "五甲班", "day": 1, "period": 1, "teacher": "陳英曉", "subject": "自然"}, {"class": "六甲班", "day": 1, "period": 1, "teacher": "王怡文", "subject": "數學"}, {"class": "四甲班", "day": 1, "period": 1, "teacher": "陳永芝", "subject": "健康"}, {"class": "一甲班", "day": 1, "period": 2, "teacher": "楊凱棋", "subject": "數學"}, {"class": "二甲班", "day": 1, "period": 2, "teacher": "蔡幸華", "subject": "數學"}, {"class": "三甲班", "day": 1, "period": 2, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 1, "period": 2, "teacher": "陳英曉", "subject": "自然"}, {"class": "六甲班", "day": 1, "period": 2, "teacher": "陳永芝", "subject": "綜合"}, {"class": "四甲班", "day": 1, "period": 2, "teacher": "黃雅玲", "subject": "社會"}, {"class": "一甲班", "day": 1, "period": 3, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 1, "period": 3, "teacher": "陳永芝", "subject": "體育"}, {"class": "三甲班", "day": 1, "period": 3, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 1, "period": 3, "teacher": "羅昭倫", "subject": "綜合"}, {"class": "六甲班", "day": 1, "period": 3, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 1, "period": 3, "teacher": "黃于玲", "subject": "國語"}, {"class": "一甲班", "day": 1, "period": 4, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 1, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 1, "period": 4, "teacher": "林瑞芳", "subject": "社會"}, {"class": "五甲班", "day": 1, "period": 4, "teacher": "羅昭倫", "subject": "社會"}, {"class": "六甲班", "day": 1, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 1, "period": 4, "teacher": "陳永芝", "subject": "綜合"}, {"class": "三甲班", "day": 1, "period": 5, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "五甲班", "day": 1, "period": 5, "teacher": "吳惠雅", "subject": "國語"}, {"class": "六甲班", "day": 1, "period": 5, "teacher": "羅昭倫", "subject": "資彈"}, {"class": "四甲班", "day": 1, "period": 5, "teacher": "黃于玲", "subject": "彈性"}, {"class": "三甲班", "day": 1, "period": 6, "teacher": "王瑞明", "subject": "健康"}, {"class": "五甲班", "day": 1, "period": 6, "teacher": "羅昭倫", "subject": "綜合"}, {"class": "六甲班", "day": 1, "period": 6, "teacher": "陳永芝", "subject": "社會"}, {"class": "四甲班", "day": 1, "period": 6, "teacher": "黃于玲", "subject": "數學"}, {"class": "三甲班", "day": 1, "period": 7, "teacher": "王瑞明", "subject": "彈性"}, {"class": "五甲班", "day": 1, "period": 7, "teacher": "羅昭倫", "subject": "體育"}, {"class": "六甲班", "day": 1, "period": 7, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "四甲班", "day": 1, "period": 7, "teacher": "黃于玲", "subject": "體育"}, {"class": "一甲班", "day": 2, "period": 1, "teacher": "楊凱棋", "subject": "數學"}, {"class": "二甲班", "day": 2, "period": 1, "teacher": "呂美純", "subject": "生活"}, {"class": "三甲班", "day": 2, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "五甲班", "day": 2, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "六甲班", "day": 2, "period": 1, "teacher": "陳永芝", "subject": "社會"}, {"class": "四甲班", "day": 2, "period": 1, "teacher": "黃于玲", "subject": "國語"}, {"class": "一甲班", "day": 2, "period": 2, "teacher": "羅昭倫", "subject": "體育"}, {"class": "二甲班", "day": 2, "period": 2, "teacher": "呂美純", "subject": "生活"}, {"class": "三甲班", "day": 2, "period": 2, "teacher": "陳永芝", "subject": "英語"}, {"class": "五甲班", "day": 2, "period": 2, "teacher": "吳惠雅", "subject": "國語"}, {"class": "六甲班", "day": 2, "period": 2, "teacher": "王怡文", "subject": "數學"}, {"class": "四甲班", "day": 2, "period": 2, "teacher": "黃于玲", "subject": "數學"}, {"class": "一甲班", "day": 2, "period": 3, "teacher": "楊凱棋", "subject": "彈性"}, {"class": "二甲班", "day": 2, "period": 3, "teacher": "蔡幸華", "subject": "美勞"}, {"class": "三甲班", "day": 2, "period": 3, "teacher": "王瑞明", "subject": "彈性"}, {"class": "五甲班", "day": 2, "period": 3, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "六甲班", "day": 2, "period": 3, "teacher": "王怡文", "subject": "彈性"}, {"class": "四甲班", "day": 2, "period": 3, "teacher": "黃于玲", "subject": "彈性"}, {"class": "一甲班", "day": 2, "period": 4, "teacher": "呂美純", "subject": "彈性"}, {"class": "二甲班", "day": 2, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 2, "period": 4, "teacher": "林瑞芳", "subject": "社會"}, {"class": "五甲班", "day": 2, "period": 4, "teacher": "陳永芝", "subject": "英語"}, {"class": "六甲班", "day": 2, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 2, "period": 4, "teacher": "黃于玲", "subject": "鄉土"}, {"class": "三甲班", "day": 2, "period": 5, "teacher": "王瑞明", "subject": "美勞"}, {"class": "五甲班", "day": 2, "period": 5, "teacher": "呂美純", "subject": "健康"}, {"class": "六甲班", "day": 2, "period": 5, "teacher": "陳永芝", "subject": "英語"}, {"class": "四甲班", "day": 2, "period": 5, "teacher": "羅昭倫", "subject": "美勞"}, {"class": "三甲班", "day": 2, "period": 6, "teacher": "王瑞明", "subject": "美勞"}, {"class": "五甲班", "day": 2, "period": 6, "teacher": "吳惠雅", "subject": "美勞"}, {"class": "六甲班", "day": 2, "period": 6, "teacher": "王怡文", "subject": "美勞"}, {"class": "四甲班", "day": 2, "period": 6, "teacher": "羅昭倫", "subject": "美勞"}, {"class": "三甲班", "day": 2, "period": 7, "teacher": "呂美純", "subject": "體育"}, {"class": "五甲班", "day": 2, "period": 7, "teacher": "吳惠雅", "subject": "美勞"}, {"class": "六甲班", "day": 2, "period": 7, "teacher": "王怡文", "subject": "美勞"}, {"class": "四甲班", "day": 2, "period": 7, "teacher": "黃于玲", "subject": "體育"}, {"class": "一甲班", "day": 3, "period": 1, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "二甲班", "day": 3, "period": 1, "teacher": "呂美純", "subject": "生活"}, {"class": "三甲班", "day": 3, "period": 1, "teacher": "羅昭倫", "subject": "自然"}, {"class": "五甲班", "day": 3, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "六甲班", "day": 3, "period": 1, "teacher": "王怡文", "subject": "數學"}, {"class": "四甲班", "day": 3, "period": 1, "teacher": "黃于玲", "subject": "數學"}, {"class": "一甲班", "day": 3, "period": 2, "teacher": "羅昭倫", "subject": "彈性"}, {"class": "二甲班", "day": 3, "period": 2, "teacher": "蔡幸華", "subject": "數學"}, {"class": "三甲班", "day": 3, "period": 2, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 3, "period": 2, "teacher": "吳惠雅", "subject": "國語"}, {"class": "六甲班", "day": 3, "period": 2, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "四甲班", "day": 3, "period": 2, "teacher": "黃雅玲", "subject": "社會"}, {"class": "一甲班", "day": 3, "period": 3, "teacher": "楊凱棋", "subject": "生活"}, {"class": "二甲班", "day": 3, "period": 3, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 3, "period": 3, "teacher": "呂美純", "subject": "體育"}, {"class": "五甲班", "day": 3, "period": 3, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "六甲班", "day": 3, "period": 3, "teacher": "林瑞芳", "subject": "自然"}, {"class": "四甲班", "day": 3, "period": 3, "teacher": "黃雅玲", "subject": "社會"}, {"class": "一甲班", "day": 3, "period": 4, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 3, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 3, "period": 4, "teacher": "楊高雄", "subject": "鄉土"}, {"class": "五甲班", "day": 3, "period": 4, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "六甲班", "day": 3, "period": 4, "teacher": "陳永芝", "subject": "社會"}, {"class": "四甲班", "day": 3, "period": 4, "teacher": "呂美純", "subject": "自然"}, {"class": "一甲班", "day": 4, "period": 1, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 4, "period": 1, "teacher": "蔡幸華", "subject": "彈性"}, {"class": "三甲班", "day": 4, "period": 1, "teacher": "王瑞明", "subject": "彈性"}, {"class": "五甲班", "day": 4, "period": 1, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "六甲班", "day": 4, "period": 1, "teacher": "王怡文", "subject": "彈性"}, {"class": "四甲班", "day": 4, "period": 1, "teacher": "黃于玲", "subject": "彈性"}, {"class": "一甲班", "day": 4, "period": 2, "teacher": "楊凱棋", "subject": "數學"}, {"class": "二甲班", "day": 4, "period": 2, "teacher": "羅昭倫", "subject": "健康"}, {"class": "三甲班", "day": 4, "period": 2, "teacher": "王瑞明", "subject": "數學"}, {"class": "五甲班", "day": 4, "period": 2, "teacher": "吳惠雅", "subject": "數學"}, {"class": "六甲班", "day": 4, "period": 2, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 4, "period": 2, "teacher": "陳永芝", "subject": "英語"}, {"class": "一甲班", "day": 4, "period": 3, "teacher": "黃雅玲", "subject": "美勞"}, {"class": "二甲班", "day": 4, "period": 3, "teacher": "蔡幸華", "subject": "數學"}, {"class": "三甲班", "day": 4, "period": 3, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 4, "period": 3, "teacher": "羅昭倫", "subject": "體育"}, {"class": "六甲班", "day": 4, "period": 3, "teacher": "陳永芝", "subject": "英語"}, {"class": "四甲班", "day": 4, "period": 3, "teacher": "黃于玲", "subject": "國語"}, {"class": "一甲班", "day": 4, "period": 4, "teacher": "黃雅玲", "subject": "美勞"}, {"class": "二甲班", "day": 4, "period": 4, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 4, "period": 4, "teacher": "羅昭倫", "subject": "自然"}, {"class": "五甲班", "day": 4, "period": 4, "teacher": "吳惠雅", "subject": "國語"}, {"class": "六甲班", "day": 4, "period": 4, "teacher": "陳永芝", "subject": "綜合"}, {"class": "四甲班", "day": 4, "period": 4, "teacher": "林瑞芳", "subject": "音樂"}, {"class": "一甲班", "day": 4, "period": 5, "teacher": "羅昭倫", "subject": "音樂"}, {"class": "二甲班", "day": 4, "period": 5, "teacher": "蔡幸華", "subject": "美勞"}, {"class": "三甲班", "day": 4, "period": 5, "teacher": "王瑞明", "subject": "國語"}, {"class": "五甲班", "day": 4, "period": 5, "teacher": "陳永芝", "subject": "英語"}, {"class": "六甲班", "day": 4, "period": 5, "teacher": "王怡文", "subject": "彈性"}, {"class": "四甲班", "day": 4, "period": 5, "teacher": "呂美純", "subject": "自然"}, {"class": "一甲班", "day": 4, "period": 6, "teacher": "楊凱棋", "subject": "生活"}, {"class": "二甲班", "day": 4, "period": 6, "teacher": "羅昭倫", "subject": "音樂"}, {"class": "三甲班", "day": 4, "period": 6, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 4, "period": 6, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "六甲班", "day": 4, "period": 6, "teacher": "王怡文", "subject": "彈性"}, {"class": "四甲班", "day": 4, "period": 6, "teacher": "呂美純", "subject": "自然"}, {"class": "一甲班", "day": 4, "period": 7, "teacher": "羅昭倫", "subject": "體育"}, {"class": "二甲班", "day": 4, "period": 7, "teacher": "陳永芝", "subject": "體育"}, {"class": "三甲班", "day": 4, "period": 7, "teacher": "王瑞明", "subject": "資彈"}, {"class": "五甲班", "day": 4, "period": 7, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "六甲班", "day": 4, "period": 7, "teacher": "陳英曉", "subject": "體育"}, {"class": "四甲班", "day": 4, "period": 7, "teacher": "呂美純", "subject": "資彈"}, {"class": "一甲班", "day": 5, "period": 1, "teacher": "楊凱棋", "subject": "數學"}, {"class": "二甲班", "day": 5, "period": 1, "teacher": "陳永芝", "subject": "彈性"}, {"class": "三甲班", "day": 5, "period": 1, "teacher": "王瑞明", "subject": "數學"}, {"class": "五甲班", "day": 5, "period": 1, "teacher": "吳惠雅", "subject": "數學"}, {"class": "六甲班", "day": 5, "period": 1, "teacher": "林瑞芳", "subject": "自然"}, {"class": "四甲班", "day": 5, "period": 1, "teacher": "黃于玲", "subject": "數學"}, {"class": "一甲班", "day": 5, "period": 2, "teacher": "楊凱棋", "subject": "生活"}, {"class": "二甲班", "day": 5, "period": 2, "teacher": "蔡幸華", "subject": "數學"}, {"class": "三甲班", "day": 5, "period": 2, "teacher": "陳永芝", "subject": "綜合"}, {"class": "五甲班", "day": 5, "period": 2, "teacher": "羅昭倫", "subject": "社會"}, {"class": "六甲班", "day": 5, "period": 2, "teacher": "林瑞芳", "subject": "自然"}, {"class": "四甲班", "day": 5, "period": 2, "teacher": "黃于玲", "subject": "國語"}, {"class": "一甲班", "day": 5, "period": 3, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 5, "period": 3, "teacher": "蔡幸華", "subject": "國語"}, {"class": "三甲班", "day": 5, "period": 3, "teacher": "林瑞芳", "subject": "社會"}, {"class": "五甲班", "day": 5, "period": 3, "teacher": "羅昭倫", "subject": "社會"}, {"class": "六甲班", "day": 5, "period": 3, "teacher": "王怡文", "subject": "數學"}, {"class": "四甲班", "day": 5, "period": 3, "teacher": "陳永芝", "subject": "綜合"}, {"class": "一甲班", "day": 5, "period": 4, "teacher": "楊凱棋", "subject": "國語"}, {"class": "二甲班", "day": 5, "period": 4, "teacher": "陳永芝", "subject": "彈性"}, {"class": "三甲班", "day": 5, "period": 4, "teacher": "羅昭倫", "subject": "自然"}, {"class": "五甲班", "day": 5, "period": 4, "teacher": "吳惠雅", "subject": "國語"}, {"class": "六甲班", "day": 5, "period": 4, "teacher": "王怡文", "subject": "國語"}, {"class": "四甲班", "day": 5, "period": 4, "teacher": "黃于玲", "subject": "國語"}, {"class": "五甲班", "day": 5, "period": 5, "teacher": "陳英曉", "subject": "自然"}, {"class": "六甲班", "day": 5, "period": 5, "teacher": "羅昭倫", "subject": "健康"}, {"class": "五甲班", "day": 5, "period": 6, "teacher": "吳惠雅", "subject": "彈性"}, {"class": "六甲班", "day": 5, "period": 6, "teacher": "陳英曉", "subject": "體育"}, {"class": "五甲班", "day": 5, "period": 7, "teacher": "呂美純", "subject": "資彈"}, {"class": "六甲班", "day": 5, "period": 7, "teacher": "王怡文", "subject": "彈性"}], "updatedAt": 1788364800000, "source": "115classschedule 校對課表資料"};
       // add unique ids
       preloaded.rows=preloaded.rows.map(function(r,i){r.id=i+1;return r;});
       saveSch(preloaded);
@@ -1863,10 +1928,187 @@ window.startVoice=function(targetId, btn){
     });
   }
 
+  /* ── 視覺化課表矩陣（來自 115classschedule） ── */
+  function cellAt(data,teacher,day,period){
+    return data.rows.find(function(r){return r.teacher===teacher&&parseInt(r.day)===day&&parseInt(r.period)===period;});
+  }
+  function renderMatrix(){
+    var wrap=document.getElementById('sch-matrix-wrap');if(!wrap)return;
+    var data=ensureSch();
+    var teacherSel=document.getElementById('mx-teacher');
+    var teachers=[...new Set(data.rows.map(function(r){return r.teacher;}))].filter(Boolean).sort();
+    if(teacherSel&&teacherSel.options.length<=1){
+      teachers.forEach(function(t){teacherSel.add(new Option(t,t));});
+    }
+    var selTeacher=teacherSel?teacherSel.value:'ALL';
+    var day=parseInt((document.getElementById('mx-day')||{}).value||1);
+    var html='';
+    if(selTeacher==='ALL'){
+      html+='<table class="sch-matrix"><tr><th>老師</th>'+[1,2,3,4,5,6,7].map(function(p){return '<th>'+p+'</th>';}).join('')+'</tr>';
+      teachers.forEach(function(t){
+        html+='<tr><td style="font-weight:700;text-align:left;padding-left:8px">'+t+'</td>';
+        for(var p=1;p<=7;p++){
+          var r=cellAt(data,t,day,p);
+          var label=r?((r.class||'').replace('班','')+'/'+r.subject):'空';
+          html+='<td class="'+(r?'mx-busy':'mx-free')+'" onclick="schMatrixEdit(\''+t+'\','+day+','+p+')">'+label+'</td>';
+        }
+        html+='</tr>';
+      });
+      html+='</table>';
+    }else{
+      html+='<div style="font-size:12px;font-weight:700;color:var(--g700);margin-bottom:6px">👤 '+selTeacher+' 老師全週課表</div>';
+      html+='<table class="sch-matrix"><tr><th>星期</th>'+[1,2,3,4,5,6,7].map(function(p){return '<th>'+p+'</th>';}).join('')+'</tr>';
+      [1,2,3,4,5].forEach(function(d){
+        html+='<tr><td style="font-weight:700">'+DAY_NAMES[d].replace('星期','週')+'</td>';
+        for(var p=1;p<=7;p++){
+          var r=cellAt(data,selTeacher,d,p);
+          var label=r?((r.class||'').replace('班','')+'/'+r.subject):'空';
+          html+='<td class="'+(r?'mx-busy':'mx-free')+'" onclick="schMatrixEdit(\''+selTeacher+'\','+d+','+p+')">'+label+'</td>';
+        }
+        html+='</tr>';
+      });
+      html+='</table>';
+    }
+    wrap.innerHTML=html;
+  }
+  window.schRenderMatrix=function(){renderMatrix();};
+  window.schMatrixEdit=function(teacher,day,period){
+    var data=ensureSch();
+    var idx=data.rows.findIndex(function(r){return r.teacher===teacher&&parseInt(r.day)===day&&parseInt(r.period)===period;});
+    var cur=idx>=0?(data.rows[idx].class+','+data.rows[idx].subject):'';
+    var input=prompt('修改 '+teacher+' 老師（'+DAY_NAMES[day]+' 第'+period+'節）\n請輸入「班級,科目」（例：六甲班,數學），留空表示設為空堂：',cur);
+    if(input===null)return;
+    input=input.trim();
+    if(!input){
+      if(idx>=0){data.rows.splice(idx,1);saveSch(data);}
+    }else{
+      var parts=input.split(/[,，]/).map(function(s){return s.trim();});
+      var cls=parts[0]||'',subj=parts[1]||'';
+      if(!cls||!subj){alert('格式錯誤，請輸入「班級,科目」，以逗號分隔');return;}
+      if(idx>=0){data.rows[idx].class=cls;data.rows[idx].subject=subj;}
+      else{data.rows.push({id:Date.now(),day:day,period:period,class:cls,subject:subj,teacher:teacher});}
+      saveSch(data);
+    }
+    renderMatrix();
+    if(typeof renderManage==='function')renderManage();
+  };
+
+  /* ── 全域搜尋（來自 115classschedule） ── */
+  var QUICK_TAGS=['一甲班','二甲班','三甲班','四甲班','五甲班','六甲班','體育','數學'];
+  function doGlobalSearch(){
+    var out=document.getElementById('sch-global-result');if(!out)return;
+    var q=((document.getElementById('sch-global-search')||{}).value||'').trim();
+    if(!q){out.innerHTML='';return;}
+    var data=ensureSch();
+    var hits=data.rows.filter(function(r){return ((r.teacher||'')+(r.class||'')+(r.subject||'')).indexOf(q)>=0;});
+    if(!hits.length){out.innerHTML='<div class="sch-empty">🔍 找不到與「'+q+'」相關的資料</div>';return;}
+    hits=hits.slice().sort(function(a,b){return parseInt(a.day)-parseInt(b.day)||parseInt(a.period)-parseInt(b.period);});
+    out.innerHTML='<div style="font-size:12px;color:var(--g600);margin-bottom:6px">共找到 '+hits.length+' 筆：</div>'
+      +hits.map(function(r){
+        return '<div class="sc-slot"><span class="sc-slot-period">'+DAY_NAMES[r.day]+r.period+'節</span><div class="sc-slot-info">'+r.class+' ／ '+r.subject+' ／ '+r.teacher+'</div></div>';
+      }).join('');
+  }
+  function renderGlobalSearch(){
+    var tagWrap=document.getElementById('sch-quick-tags');
+    if(tagWrap&&!tagWrap.dataset.built){
+      tagWrap.innerHTML=QUICK_TAGS.map(function(k){return '<button type="button" class="sch-quick-tag" onclick="schQuickSearch(\''+k+'\')">'+k+'</button>';}).join('');
+      tagWrap.dataset.built='1';
+    }
+    doGlobalSearch();
+  }
+  window.schGlobalSearch=function(){doGlobalSearch();};
+  window.schQuickSearch=function(kw){
+    var inp=document.getElementById('sch-global-search');if(inp)inp.value=kw;
+    doGlobalSearch();
+  };
+
+  /* ── 多節／區間連調可行性試算（來自 115classschedule） ── */
+  function subjAt(data,teacher,day,period){
+    var r=cellAt(data,teacher,day,period);
+    return r?(r.class+' '+r.subject):null;
+  }
+  function autoFilterSwap(){
+    var data=ensureSch();
+    var teachers=[...new Set(data.rows.map(function(r){return r.teacher;}))].filter(Boolean).sort();
+    var selA=document.getElementById('mw-teacher-a');
+    if(selA&&!selA.dataset.built){
+      selA.innerHTML=teachers.map(function(t){return '<option>'+t+'</option>';}).join('');
+      selA.dataset.built='1';
+    }
+    var tA=selA?selA.value:'';
+    var dayA=parseInt((document.getElementById('mw-day-a')||{}).value||1);
+    var startA=parseInt((document.getElementById('mw-period-a')||{}).value||1)-1;
+    var count=parseInt((document.getElementById('mw-count-a')||{}).value||1);
+    var selB=document.getElementById('mw-teacher-b');if(!selB)return;
+    var curB=selB.value;
+    var free=[],busy=[];
+    teachers.forEach(function(t){
+      if(t===tA)return;
+      var isFree=true;
+      if(startA+count<=7){
+        for(var i=0;i<count;i++){if(subjAt(data,t,dayA,startA+1+i)){isFree=false;break;}}
+      }else isFree=false;
+      (isFree?free:busy).push(t);
+    });
+    var html='';
+    if(free.length)html+='<optgroup label="🟢 該時段完全空堂（建議優先對調）">'+free.map(function(t){return '<option>🟢 '+t+'</option>';}).join('')+'</optgroup>';
+    if(busy.length)html+='<optgroup label="🔴 該時段已有課／需再比對時段">'+busy.map(function(t){return '<option>'+t+'</option>';}).join('')+'</optgroup>';
+    selB.innerHTML=html||'<option value="">（無其他老師）</option>';
+    var curClean=curB.replace('🟢 ','');
+    var match=Array.prototype.filter.call(selB.options,function(o){return o.value.replace('🟢 ','')===curClean;})[0];
+    if(match)selB.value=match.value;
+  }
+  window.schAutoFilterSwap=function(){autoFilterSwap();};
+  window.schCheckMultiSwap=function(){
+    var data=ensureSch();
+    var tA=((document.getElementById('mw-teacher-a')||{}).value||'').replace('🟢 ','');
+    var dayA=parseInt((document.getElementById('mw-day-a')||{}).value||1);
+    var startA=parseInt((document.getElementById('mw-period-a')||{}).value||1)-1;
+    var count=parseInt((document.getElementById('mw-count-a')||{}).value||1);
+    var tB=((document.getElementById('mw-teacher-b')||{}).value||'').replace('🟢 ','');
+    var dayB=parseInt((document.getElementById('mw-day-b')||{}).value||1);
+    var startB=parseInt((document.getElementById('mw-period-b')||{}).value||1)-1;
+    var out=document.getElementById('mw-result');if(!out)return;
+    if(!tA||!tB){out.innerHTML='<div class="sch-swap-err">⚠️ 請選擇雙方老師</div>';return;}
+    if(tA===tB){out.innerHTML='<div class="sch-swap-err">⚠️ 請選擇不同的教師進行互調！</div>';return;}
+    if(startA+count>7||startB+count>7){out.innerHTML='<div class="sch-swap-err">⚠️ 超出當日最大節次（第7節），請調整起始節次或連調節數！</div>';return;}
+    var conflictsA=[],conflictsB=[],detailA=[],detailB=[];
+    for(var i=0;i<count;i++){
+      var pA=startA+i,pB=startB+i;
+      var aInA=subjAt(data,tA,dayA,pA+1)||'空';
+      var aInB=subjAt(data,tA,dayB,pB+1);
+      detailA.push('第'+(pA+1)+'節['+aInA+'] ➔ 移至 '+DAY_NAMES[dayB]+'第'+(pB+1)+'節');
+      if(aInB)conflictsA.push(DAY_NAMES[dayB]+'第'+(pB+1)+'節已有課['+aInB+']');
+      var bInB=subjAt(data,tB,dayB,pB+1)||'空';
+      var bInA=subjAt(data,tB,dayA,pA+1);
+      detailB.push('第'+(pB+1)+'節['+bInB+'] ➔ 移至 '+DAY_NAMES[dayA]+'第'+(pA+1)+'節');
+      if(bInA)conflictsB.push(DAY_NAMES[dayA]+'第'+(pA+1)+'節已有課['+bInA+']');
+    }
+    var rangeA=count===1?('第'+(startA+1)+'節'):('第'+(startA+1)+'~'+(startA+count)+'節（'+count+'節）');
+    var rangeB=count===1?('第'+(startB+1)+'節'):('第'+(startB+1)+'~'+(startB+count)+'節（'+count+'節）');
+    var html='<div style="font-size:13px;font-weight:700;margin-top:10px">【連調區間可行性評估】</div>'
+      +'<div style="margin-top:4px;font-size:12px">👤 <b>'+tA+'</b>：'+DAY_NAMES[dayA]+' '+rangeA+'</div>'
+      +'<div style="font-size:12px">👤 <b>'+tB+'</b>：'+DAY_NAMES[dayB]+' '+rangeB+'</div>';
+    if(!conflictsA.length&&!conflictsB.length){
+      html+='<div class="sch-swap-ok"><div style="color:var(--ok);font-weight:700">✅ 多節/區間連調完全可行！</div>'
+        +'<div style="margin-top:6px"><b>連調細節：</b><br>• '+tA+' 老師：'+detailA.join('；')+'<br>• '+tB+' 老師：'+detailB.join('；')+'</div></div>';
+    }else{
+      html+='<div class="sch-swap-err"><div style="color:#e11d48;font-weight:700">⚠️ 區間連調時間衝突：</div>'
+        +(conflictsA.length?'<div>• <b>'+tA+'</b> 衝突：'+conflictsA.join('、')+'</div>':'')
+        +(conflictsB.length?'<div>• <b>'+tB+'</b> 衝突：'+conflictsB.join('、')+'</div>':'')
+        +'</div>';
+    }
+    out.innerHTML=html;
+  };
+  function populateSwapSelects(){autoFilterSwap();}
+
   /* expose render functions globally so other modules can call them */
   window._schRenderStats=renderStats;
   window._schRenderToday=renderToday;
   window._schRenderConflict=renderConflictSelects;
+  window._schRenderMatrix=renderMatrix;
+  window._schRenderGlobalSearch=renderGlobalSearch;
+  window._schPopulateSwap=populateSwapSelects;
 
 })();
 
@@ -2275,11 +2517,18 @@ window.startVoice=function(targetId, btn){
     });
     if(name==='stats'){if(window._schRenderStats)window._schRenderStats();}
     if(name==='today'){if(window._schRenderToday)window._schRenderToday();}
-    if(name==='conflict'){if(window._schRenderConflict)window._schRenderConflict();}
+    if(name==='conflict'){
+      if(window._schRenderConflict)window._schRenderConflict();
+      if(window._schRenderGlobalSearch)window._schRenderGlobalSearch();
+      if(window._schPopulateSwap)window._schPopulateSwap();
+    }
     if(name==='subsrec')renderSubsRec();
     if(name==='subspay'){initDates();renderPayCalc();}
     if(name==='admin')renderAdminPanel();
-    if(name==='manage'){if(typeof renderManage==='function')renderManage();}
+    if(name==='manage'){
+      if(typeof renderManage==='function')renderManage();
+      if(window._schRenderMatrix)window._schRenderMatrix();
+    }
   };
 
   /* ─ Also pre-load default admin config if none exists ─ */
